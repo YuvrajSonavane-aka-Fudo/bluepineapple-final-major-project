@@ -19,7 +19,7 @@ urlpatterns = [
     path("projects",views.projects),
     path("dashboard/employees",views.dashboard_employees),
     path("dashboard/projects",views.dashboard_projects),
-    # path("dashboard/employee-cell-details",views.employee_cell_details),
-    # path("dashboard/project-cell-details",views.project_cell_details),
-    # path("dashboard/day-details",views.day_details),
+#     path("dashboard/employee-cell-details",views.employee_cell_details),
+#     path("dashboard/project-cell-details",views.project_cell_details),
+#     path("dashboard/day-details",views.day_details),
 ]
