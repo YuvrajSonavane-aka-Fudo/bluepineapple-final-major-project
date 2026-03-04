@@ -71,3 +71,24 @@ def connect(request):
         "user_id":    user.id,
         "user_role":  user.role,       # "Senior Engineer", "Account Manager", etc.
     })
+
+@api_view(["GET"])
+def projects(request):
+    """
+    Return projects the user can see (for the filter dropdown).
+
+    Returns: { projects: [ { project_id, project_name }, ... ] }
+    """
+    user = get_user_from_request(request)
+    if not user:
+        return Response({"error": "Unauthorized."}, status=401)
+
+    accessible_ids = get_accessible_project_ids(user)
+    qs = Project.objects.filter(id__in=accessible_ids, is_active=True).order_by("project_name")
+
+    return Response({
+        "projects": [
+            {"project_id": p.id, "project_name": p.project_name}
+            for p in qs
+        ]
+    })
