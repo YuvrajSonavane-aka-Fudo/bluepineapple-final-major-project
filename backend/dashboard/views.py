@@ -92,3 +92,222 @@ def projects(request):
             for p in qs
         ]
     })
+
+@api_view(["POST"])
+def dashboard_employees(request):
+    """
+    Employee Leave View — full grid of employees × dates.
+
+    Body:
+      start_date     (required)
+      end_date       (required)
+      project_ids    (optional)
+      leave_types    (optional)
+      leave_statuses (optional)
+
+    Returns: { date_strip, employees: [ { user_id, full_name, role, cells } ] }
+
+    IMPORTANT: Because leave_applications has a project_id column, one user can have
+    multiple leave records for the same date (one per project). We consolidate them
+    into one row per employee — if a user has any leave on a date, we show the first
+    matching record in their cell (the most impactful one).
+    """
+    user = get_user_from_request(request)
+    if not user:
+        return Response({"error": "Unauthorized."}, status=401)
+
+    try:
+        start_date = parse_date(request, "start_date")
+        end_date   = parse_date(request, "end_date")
+    except ValueError as e:
+        return Response({"error": str(e)}, status=400)
+
+    if end_date < start_date:
+        return Response({"error": "end_date must be on or after start_date."}, status=400)
+
+    leave_types = request.data.get("leave_types",[])  
+    leave_statuses = request.data.get("leave_statuses",[])  
+    requested_pids = request.data.get("project_ids",[])
+
+    accessible_ids = get_accessible_project_ids(user)
+    scoped_pids = [p for p in requested_pids if p in accessible_ids] if requested_pids else accessible_ids
+
+    today = date.today()
+    assigned_user_ids = ProjectAssignment.objects.filter(
+        project_id__in = scoped_pids,
+        is_active = True,
+        assigned_from__lte = today ,
+        assigned_till__isnull = True,
+    ).values_list("user_id",flat = True)
+
+    employees = User.objects.filter(
+        id__in = assigned_user_ids , is_active = True
+    ).order_by("full_name")
+
+    leave_qs = LeaveApplication.objects.filter(
+        user__in = employees,
+        project_id__in = scoped_pids,
+        start_date__lte = end_date,
+        end_date__gte = start_date,
+    )
+
+    leave_qs = apply_leave_filters(leave_qs , leave_types , leave_statuses)
+
+    leaves_by_user = {}
+    for leave in leave_qs:
+        leaves_by_user.setdefault(leave.user_id , []).append(leave)
+
+    employee_data = []
+    for emp in employees:
+        emp_leaves = leaves_by_user.get(emp.id , [])
+        cells = {}
+        current = start_date
+        while current <= end_date:
+            leave_today = next(
+                (l for l in emp_leaves if l.start_date <= current <= l.end_date),
+                None,
+            )
+            cells[str(current)] = build_cell_payload(leave_today)
+            current += timedelta(days = 1)
+
+        employee_data.append(
+            {
+                "user_id" : emp.id,
+                "full_name":emp.full_name,
+                "role":emp.role,
+                "cells":cells,
+            }
+        )
+
+    return Response(
+        {
+            "date_strip" : build_date_strip(start_date , end_date),
+            "employees" : employee_data,
+        }
+    )
+
+
+@api_view(["POST"])
+def dashboard_projects(request):
+    """
+    Projects Dashboard : workforce and risk per project day wise
+
+    body :
+    start_date (required)
+    end_date (required)
+    project_ids (optional)
+    leave_statuses (optional)
+
+    returns:
+    {
+        date_strip,
+        projects:[
+            {
+                project_id , project_name , required_workforce ,
+                cells:{
+                    date: {
+                        assigned_employees , employees_on_leave, 
+                        available_workforce , risk_level
+                    }
+                }
+            }
+        ]
+    }
+
+    Risk is calculated using the project's own threshold value .
+    risk_threshold_percent & warning_threshold_percent
+    """
+    user = get_user_from_request(request)
+
+    if not user:
+        return Response({"error" : "Unauthorized"}, status = 401)
+    
+    try:
+        start_date = parse_date(request , "start_date")
+        end_date = parse_date(request , "end_date")
+    except ValueError as e:
+        return Response({"error":str(e)}, status = 400)
+
+    if end_date < start_date:
+        return Response({"error": "end date cannot be before start date"}, status = 400)
+
+    leave_statuses = request.data.get("leave_statuses",[])
+    requested_pids = request.data.get("project_ids",[])
+
+    accessible_ids = get_accessible_project_ids(user)
+    scoped_pids = [p for p in requested_pids if p in accessible_ids] if requested_pids else accessible_ids
+
+    projects_qs = Project.objects.filter(
+        id__in = scoped_pids , is_active = True
+    ).order_by("project_name")
+
+    today = date.today()
+    assignments = ProjectAssignment.objects.filter(
+        project_id__in = scoped_pids,
+        is_active = True,
+        assigned_from__lte = today ,
+        assigned_till__isnull = True,
+    )
+
+    project_members = {}
+    all_member_ids = set()
+
+    for a in assignments:
+        project_members.setdefault(a.project_id , set()).add(a.user_id)
+        all_member_ids.add(a.user_id)
+
+    leave_qs = LeaveApplication.objects.filter(
+        user_id__in = all_member_ids,
+        project_id__in = scoped_pids,
+        start_date__lte = end_date,
+        end_date__gte = start_date,
+    )
+
+    if leave_statuses:
+        leave_qs = leave_qs.filter(leave_status__in = leave_statuses)
+
+    leaves_by_user_project = {}
+    for leave in leave_qs:
+        key = (leave.user_id , leave.project_id)
+        leaves_by_user_project.setdefault(key , []).append(leave)
+
+    project_data = []
+    for project in project_qs:
+        member_ids = project_members.get(project.id , set())
+        assigned_count = len(member_ids)
+        cells = {}
+
+        current = start_date
+        while current<=end_date:
+            on_leave_count = sum(
+                1 for uid in member_ids
+                if any(
+                    l.start<= current <= l.end_date
+                    for l in leaves_by_user_project.get((uid , project.id), []) 
+                )
+            )
+            available = assigned_count - on_leave_count
+            cells[str(current)] = {
+                "assigned_employees" : assigned_count,
+                "employees_on_leave" : on_leave_count,
+                "available_workforce" : available,
+                "risk_level" : calculate_risk_level(project , available),
+
+            }
+            current += timedelta(days = 1)
+        
+        project_data.append(
+            {
+                "project_id" : project_id ,
+                "project_name" : project.project_name,
+                "required_workforce" : project.required_workforce,
+                "cells":cells,
+            })
+
+    return Response(
+            {
+                "date_strip" : build_date_strip(start_date , end_date),
+                "projects" : project_data,
+            }
+        )
+        
