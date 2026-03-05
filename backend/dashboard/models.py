@@ -58,7 +58,7 @@ class ProjectAssignment(models.Model):
 class PublicHolidays(models.Model):
     holiday_name = models.CharField(max_length = 255)
     holiday_date = models.DateField()
-    holiday_day = models.CharField(max_length = 50)
+    day = models.CharField(max_length = 50)
 
     class Meta:
         managed  = False
