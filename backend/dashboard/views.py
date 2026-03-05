@@ -272,7 +272,7 @@ def dashboard_projects(request):
         leaves_by_user_project.setdefault(key , []).append(leave)
 
     project_data = []
-    for project in project_qs:
+    for project in projects_qs:
         member_ids = project_members.get(project.id , set())
         assigned_count = len(member_ids)
         cells = {}
@@ -282,7 +282,7 @@ def dashboard_projects(request):
             on_leave_count = sum(
                 1 for uid in member_ids
                 if any(
-                    l.start<= current <= l.end_date
+                    l.start_date<= current <= l.end_date
                     for l in leaves_by_user_project.get((uid , project.id), []) 
                 )
             )
@@ -298,7 +298,7 @@ def dashboard_projects(request):
         
         project_data.append(
             {
-                "project_id" : project_id ,
+                "project_id" : project.id ,
                 "project_name" : project.project_name,
                 "required_workforce" : project.required_workforce,
                 "cells":cells,
