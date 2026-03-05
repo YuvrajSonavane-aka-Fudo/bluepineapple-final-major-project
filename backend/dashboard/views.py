@@ -41,8 +41,6 @@ from .utils import (
 
 
 # ENDPOINT 1 — POST /api/v1/connect
-
-
 @api_view(["POST"])
 def connect(request):
     """
@@ -72,6 +70,8 @@ def connect(request):
         "user_role":  user.role,       # "Senior Engineer", "Account Manager", etc.
     })
 
+
+# ENDPOINT 2 — POST /api/v1/projects
 @api_view(["GET"])
 def projects(request):
     """
@@ -93,6 +93,7 @@ def projects(request):
         ]
     })
 
+# ENDPOINT 1 — POST /api/v1/dashboard/employees
 @api_view(["POST"])
 def dashboard_employees(request):
     """
@@ -147,6 +148,7 @@ def dashboard_employees(request):
     leave_qs = LeaveApplication.objects.filter(
         user__in = employees,
         project_id__in = scoped_pids,
+        
         start_date__lte = end_date,
         end_date__gte = start_date,
     )
@@ -186,7 +188,7 @@ def dashboard_employees(request):
         }
     )
 
-
+# ENDPOINT 1 — POST /api/v1/dashboard/projects
 @api_view(["POST"])
 def dashboard_projects(request):
     """
