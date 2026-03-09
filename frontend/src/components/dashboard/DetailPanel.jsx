@@ -228,8 +228,17 @@ function EmployeeDetail({ data, emp, date }) {
             {leave.is_half_day && (
               <DetailRow label="Half-day Schedule" value={
                 <div style={s8.halfDayPreview}>
-                  <div style={{ ...s8.halfCell, background: '#3b5bdb', clipPath: 'polygon(0 0,100% 0,0 100%)' }} />
-                  <div style={s8.halfCell} />
+                  {leave.half_day_session === 'First Half' ? (
+                    <>
+                      <div style={{ ...s8.halfCell, background: '#A7C7E7', clipPath: 'polygon(0 0,100% 0,0 100%)' }} />
+                      <div style={s8.halfCell} />
+                    </>
+                  ) : (
+                    <>
+                      <div style={s8.halfCell} />
+                      <div style={{ ...s8.halfCell, background: '#A7C7E7', clipPath: 'polygon(100% 0,100% 100%,0 100%)' }} />
+                    </>
+                  )}
                 </div>
               } />
             )}
@@ -331,7 +340,7 @@ function ProjectDetail({ data }) {
                         width: 20, height: 20, borderRadius: 4,
                         background: emp?.is_half_day
                           ? 'transparent'
-                          : (LEAVE_COLORS[emp?.leave_type] || '#3b5bdb'),
+                          : (LEAVE_COLORS[emp?.leave_type] || '#A7C7E7'),
                         border: '1px solid #e8eaed',
                         overflow: 'hidden', position: 'relative',
                         ...(emp?.is_half_day ? {} : {}),
@@ -339,7 +348,7 @@ function ProjectDetail({ data }) {
                         {emp?.is_half_day && (
                           <div style={{
                             position: 'absolute', inset: 0,
-                            background: LEAVE_COLORS[emp?.leave_type] || '#3b5bdb',
+                            background: LEAVE_COLORS[emp?.leave_type] || '#A7C7E7',
                             clipPath: emp?.half_day_session === 'Second Half'
                               ? 'polygon(100% 0,100% 100%,0 100%)'
                               : 'polygon(0 0,100% 0,0 100%)',

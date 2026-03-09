@@ -18,7 +18,7 @@ export default function Toolbar({
   const [typeOpen, setTypeOpen] = useState(false);
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected'];
-  const ALL_TYPES    = ['Paid', 'Sick', 'WFH', 'Half Day', 'Conference'];
+  const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'Conference'];
 
   const toggleArr = (arr, val, setter) =>
     setter(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);

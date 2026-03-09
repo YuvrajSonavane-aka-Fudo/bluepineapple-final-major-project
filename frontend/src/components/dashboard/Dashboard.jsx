@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [loadingEmp,      setLoadingEmp]      = useState(false);
   const [loadingProj,     setLoadingProj]     = useState(false);
   const [detailCtx,       setDetailCtx]       = useState(null);
+  const [legendVisible,   setLegendVisible]   = useState(true);
 
   const containerRef = useRef(null);
   const [empHeight, setEmpHeight] = useState(null);
@@ -147,7 +148,21 @@ export default function Dashboard() {
             />
           </div>
         </div>
-        <Legend />
+        <div style={{ position: 'relative', display: 'flex' }}>
+          <div style={{ width: legendVisible ? 200 : 0, transition: 'width 0.3s ease', overflow: 'hidden' }}>
+            <Legend />
+          </div>
+          <button onClick={() => setLegendVisible(!legendVisible)} style={{
+            position: 'absolute', left: -30, top: 10,
+            background: '#ffffff', border: '1px solid #e8eaed', borderRadius: 4,
+            width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#9aa0ad', zIndex: 10,
+          }} title="Toggle Legend">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points={legendVisible ? "15,18 9,12 15,6" : "9,18 15,12 9,6"}/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <DetailPanel
