@@ -73,7 +73,7 @@ body {
   flex-direction: column;
 }
 
-::-webkit-scrollbar { width: 6px; height: 1px; }
+::-webkit-scrollbar { width: 1px; height: 1px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d4d7dc; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #b0b5be; }

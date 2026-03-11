@@ -27,7 +27,7 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
         let headerBg = '#f8f9fb';
         if (isWeekend)                            headerBg = 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)';
         else if (isHoliday)                       headerBg = '#fefce8';
-        else if (hasLeave)                        headerBg = '#d5acac';  // dull red tint
+        else if (hasLeave)                        headerBg = '#ffe2e2';  // dull red tint
         else if (risk === 'HIGH')                 headerBg = '#FEF2F2';
         else if (risk === 'MEDIUM')               headerBg = '#FFF7ED';
 
@@ -46,7 +46,7 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
         return (
           <div
             key={d.date}
-            onClick={() => onDateClick && onDateClick(d.date)}
+            onClick={(e) => onDateClick && onDateClick(d.date,e)}
             style={{
               width: CELL_W,
               minWidth: CELL_W,
