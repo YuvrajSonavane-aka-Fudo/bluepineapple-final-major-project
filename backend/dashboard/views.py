@@ -417,7 +417,7 @@ def employee_cell_details(request):
             entry = {
                 "project_id":project.id,
                 "project_name":project.project_name,
-                "availability" : "PARTIALLY_AVAILABLE",
+                "availability" : "NOT_AVAILABLE",
                 "leave_type" : leave.leave_type,
                 "is_half_day" : False,
             }
