@@ -2,11 +2,12 @@
 dashboard/models.py
 ────────────────────
 
-All models have managed = False so Django never touches the Supabase tables.
+All models have managed = True so the test DB (SQLite) creates the tables.
+Django will NOT alter your Supabase tables as long as you never run
+`migrate` against production — the tables already exist there.
 
-The Session model IS managed by Django — it's the only table Django will create.
+The Session model is the only table Django manages in production.
 Run:  python manage.py makemigrations && python manage.py migrate
-That will only create the sessions table.
 """
 
 from django.db import models
@@ -16,11 +17,11 @@ class User(models.Model):
     employee_code = models.CharField(max_length=50, unique=True)
     full_name = models.CharField(max_length=200)
     email = models.EmailField(unique=True)
-    role = models.CharField(max_length=100)   # "Senior Engineer", "Account Manager", etc.
+    role = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        managed  = False
+        managed  = True
         db_table = "users"
 
     def __str__(self):
@@ -28,15 +29,15 @@ class User(models.Model):
 
 
 class Project(models.Model):
-    projectid = models.CharField(max_length=50, unique=True)  # "PRJ-KERNEL"
+    projectid = models.CharField(max_length=50, unique=True)
     project_name = models.CharField(max_length=200)
     required_workforce = models.IntegerField(default=0)
-    risk_threshold_percent = models.IntegerField(default=50)   # HIGH when available < 50%
-    warning_threshold_percent = models.IntegerField(default=75)   # MEDIUM when available < 75%
+    risk_threshold_percent = models.IntegerField(default=50)
+    warning_threshold_percent = models.IntegerField(default=75)
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        managed  = False
+        managed  = True
         db_table = "projects"
 
     def __str__(self):
@@ -47,31 +48,31 @@ class ProjectAssignment(models.Model):
     user = models.ForeignKey(User,    on_delete=models.DO_NOTHING, db_column="user_id")
     project = models.ForeignKey(Project, on_delete=models.DO_NOTHING, db_column="project_id")
     assigned_from = models.DateField(null=True, blank=True)
-    assigned_till = models.DateField(null=True, blank=True)  # null = still assigned
+    assigned_till = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        managed  = False
+        managed  = True
         db_table = "project_assignments"
 
 
 class PublicHolidays(models.Model):
-    holiday_name = models.CharField(max_length = 255)
+    holiday_name = models.CharField(max_length=255)
     holiday_date = models.DateField()
-    day = models.CharField(max_length = 50)
+    day = models.CharField(max_length=50)
 
     class Meta:
-        managed  = False
+        managed  = True
         db_table = "public_holidays"
 
 
 class LeaveApplication(models.Model):
     LEAVE_TYPES = [
-        ("Paid","Paid"),
-        ("Sick","Sick"),
-        ("WFH","WFH"),
-        ("Half Day","Half Day"),
-        ("Conference","Conference"),
+        ("Paid",       "Paid"),
+        ("Sick",       "Sick"),
+        ("WFH",        "WFH"),
+        ("Half Day",   "Half Day"),
+        ("Conference", "Conference"),
     ]
     STATUSES = [
         ("Approved", "Approved"),
@@ -93,7 +94,7 @@ class LeaveApplication(models.Model):
     half_day_session = models.CharField(max_length=20, choices=SESSIONS, null=True, blank=True)
 
     class Meta:
-        managed  = False
+        managed  = True
         db_table = "leave_applications"
 
     def __str__(self):
