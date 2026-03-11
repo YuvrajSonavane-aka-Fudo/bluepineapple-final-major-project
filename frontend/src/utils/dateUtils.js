@@ -3,6 +3,8 @@ import {
   startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   addDays, addWeeks, addMonths,
   format, eachDayOfInterval, parseISO, isToday,
+  startOfYear,
+  endOfYear,
 } from 'date-fns';
 
 export const fmt = (d) => format(d instanceof Date ? d : new Date(d), 'yyyy-MM-dd');
@@ -15,6 +17,11 @@ export const getWeekRange = (anchor = new Date()) => ({
 export const getMonthRange = (anchor = new Date()) => ({
   start: startOfMonth(anchor),
   end:   endOfMonth(anchor),
+});
+
+export const getYearRange = (anchor = new Date()) => ({
+  start: startOfYear(anchor),
+  end:   endOfYear(anchor),
 });
 
 export const getTodayRange = () => ({ start: new Date(), end: new Date() });
