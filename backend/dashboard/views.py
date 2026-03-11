@@ -537,7 +537,7 @@ def project_cell_details(request):
                  "user_id" : emp.id,
                 "full_name":emp.full_name,
                 "role" : emp.role,
-                "availability" : " ON_lEAVE",
+                "availability" : "ON_lEAVE",
                 "leave_type" : leave.leave_type,
                 "is_half_day" : False,
             }

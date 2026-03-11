@@ -62,3 +62,8 @@ npm-debug.log*
 
 #postman data
 venv
+generate_report.py
+test_runner.py
+test_results.json
+test_report.xlsx
+~$test_report.xlsx
