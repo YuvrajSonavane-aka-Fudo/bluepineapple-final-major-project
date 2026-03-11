@@ -127,6 +127,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+TEST_RUNNER = "dashboard.test_runner.ReportingTestRunner"
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
