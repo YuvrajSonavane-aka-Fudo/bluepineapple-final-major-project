@@ -1,117 +1,122 @@
 // src/components/shared/LeaveCell.jsx
-// Matches mock Image 2 exactly:
-//   Full leave = solid colored block
-//   Half AM    = top-left triangle (navy blue in mock)
-//   Half PM    = bottom-right triangle
-//   WFH        = small dot / text badge (green in mock)
-//   Pending    = dashed border
-//   Rejected   = X mark with red border
+// ALL colors match Legend.jsx exactly
+// Today column highlight is handled by EmployeePanel overlay — NOT here
 
-const LEAVE_COLORS = {
-  Paid:       ' #A7C7E7',
-  Sick:       '#FFFAA0',
-  WFH:        '#16a34a',
-  'Half Day': ' #A7C7E7',
-  Conference: ' #A7C7E7',
-  Unpaid:     '#FFFAA0',
-};
-
-export default function LeaveCell({ cell, dateInfo, isToday, onClick }) {
+export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
   const isWeekend = dateInfo?.is_weekend;
   const isHoliday = dateInfo?.is_public_holiday;
   const hasLeave  = cell !== null && cell !== undefined;
-  const color     = hasLeave ? (LEAVE_COLORS[cell?.leave_type] || '#3b5bdb') : null;
-
-  // Background for weekend/holiday — hatched pattern like mock
-  let cellBg = 'transparent';
-  if (isWeekend) cellBg = 'repeating-linear-gradient(45deg, #f0f2f5, #f0f2f5 2px, #e8eaed 2px, #e8eaed 6px)';
-  if (isHoliday) cellBg = '#fef9e7';
-
+  const leaveType = cell?.leave_type;
+  const session   = cell?.half_day_session;
   const isPending  = hasLeave && cell?.leave_status === 'Pending';
   const isRejected = hasLeave && cell?.leave_status === 'Rejected';
-  const isWFH      = hasLeave && cell?.leave_type === 'WFH';
+  const isWFH      = hasLeave && leaveType === 'WFH';
   const isHalfDay  = hasLeave && cell?.is_half_day;
-  const session    = cell?.half_day_session;
+
+  // Background — NO today tint here, handled by parent overlay
+  let cellBg = '#ffffff';
+  if (isWeekend) cellBg = 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)';
+  if (isHoliday && !isWeekend) cellBg = '#fefce8';
+
+  const nb = '1px solid #e8eaed';
+
+  // Leave type → fill color per Legend LEAVE TYPES
+  const LEAVE_COLOR = {
+    'Paid':   '#2563EB',
+    'Unpaid': '#93C5FD',
+    'WFH':    '#06B6D4',
+  };
+  const baseColor = LEAVE_COLOR[leaveType] ?? '#2563EB';
 
   return (
     <div
       onClick={hasLeave ? onClick : undefined}
       style={{
-        width: 44, minWidth: 44, height: 44,
+        width: 35, minWidth: 35, height: 35,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: hasLeave ? 'pointer' : 'default',
-        flexShrink: 0,
-        position: 'relative',
+        flexShrink: 0, position: 'relative',
         background: cellBg,
-        border: isToday ? '2px solid #e85d26' : '1px solid transparent',
-        borderRadius: 4,
-        padding: 2,
+        borderTop: 'none',
+        borderLeft: isFirst ? nb : 'none',
+        borderRight: nb,
+        borderBottom: nb,
+        boxSizing: 'border-box',
+        padding: 0,
+        zIndex: hasLeave ? 2 : 'auto',
       }}
     >
-      {hasLeave && !isHalfDay && !isWFH && !isRejected && (
-        /* Full day block */
+      {/* APPROVED full day */}
+      {hasLeave && !isHalfDay && !isWFH && !isRejected && !isPending && (
+        <div style={{ position: 'absolute', inset: 3, borderRadius: 3, background: baseColor }} />
+      )}
+
+      {/* PENDING full day — dashed amber border */}
+      {hasLeave && !isHalfDay && !isWFH && !isRejected && isPending && (
         <div style={{
-          position: 'absolute', inset: isPending ? 3 : 2,
-          borderRadius: 4,
-          background: isPending ? 'transparent' : color,
-          border: isPending ? `2px dashed ${color}` : 'none',
-          opacity: isPending ? 0.8 : 1,
+          position: 'absolute', inset: 4, borderRadius: 3,
+          border: '2px dashed #994545', background: 'transparent',
         }} />
       )}
 
+      {/* WFH full day — cyan dot */}
       {hasLeave && isWFH && !isHalfDay && (
-        /* WFH: small centered text badge like mock */
-        <div style={{
-          position: 'absolute', inset: 2,
-          borderRadius: 4,
-          background: '#dcfce7',
-          border: isPending ? `2px dashed ${color}` : `1.5px solid #bbf7d0`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', letterSpacing: '0.3px' }}>WFH</span>
-        </div>
+        <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#06B6D4' }} />
       )}
 
+      {/* REJECTED full day */}
       {hasLeave && isRejected && !isHalfDay && (
-        /* Rejected: X icon with pink/red bg like mock */
         <div style={{
-          position: 'absolute', inset: 2,
-          borderRadius: 4,
-          background: '#fff1f2',
-          border: '1.5px solid #fecdd3',
+          position: 'absolute', inset: 3, borderRadius: 3,
+          background: '#fff1f2', border: '1px solid #fecdd3',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="3">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3.5">
             <path d="M18 6L6 18M6 6l12 12"/>
           </svg>
         </div>
       )}
 
-      {/* Half day AM (First Half) = upper-left triangle, like mock "Half Day AM" */}
-      {hasLeave && isHalfDay && session === 'First Half' && (
-        <div style={{
-          position: 'absolute', inset: 2, borderRadius: 4, overflow: 'hidden',
-          border: '1.5px solid #e8eaed',
-        }}>
+      {/* HALF DAY AM — upper-left triangle, leave-type color */}
+      {hasLeave && isHalfDay && !isRejected && !isPending && session === 'First Half' && (
+        <div style={{ position: 'absolute', inset: 3, borderRadius: 3, overflow: 'hidden' }}>
           <div style={{
             position: 'absolute', inset: 0,
-            background: color,
-            clipPath: 'polygon(0 0, 100% 0, 0 100%)',
+            background: baseColor,
+            clipPath: 'polygon(0 0,100% 0,0 100%)',
           }} />
         </div>
       )}
 
-      {/* Half day PM (Second Half) = lower-right triangle */}
-      {hasLeave && isHalfDay && session === 'Second Half' && (
-        <div style={{
-          position: 'absolute', inset: 2, borderRadius: 4, overflow: 'hidden',
-          border: '1.5px solid #e8eaed',
-        }}>
+      {/* HALF DAY PM — lower-right triangle, leave-type color */}
+      {hasLeave && isHalfDay && !isRejected && !isPending && session === 'Second Half' && (
+        <div style={{ position: 'absolute', inset: 3, borderRadius: 3, overflow: 'hidden' }}>
           <div style={{
             position: 'absolute', inset: 0,
-            background: color,
-            clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
+            background: baseColor,
+            clipPath: 'polygon(100% 0,100% 100%,0 100%)',
           }} />
+        </div>
+      )}
+
+      {/* HALF DAY PENDING */}
+      {hasLeave && isHalfDay && isPending && (
+        <div style={{
+          position: 'absolute', inset: 4, borderRadius: 3,
+          border: '2px dashed #994545', background: 'transparent',
+        }} />
+      )}
+
+      {/* HALF DAY REJECTED */}
+      {hasLeave && isHalfDay && isRejected && (
+        <div style={{
+          position: 'absolute', inset: 3, borderRadius: 3,
+          background: '#fff1f2', border: '1px solid #fecdd3',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3.5">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
         </div>
       )}
     </div>

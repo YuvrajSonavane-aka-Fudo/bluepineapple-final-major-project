@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [selectedProjIds, setSelectedProjIds] = useState([]);
   const [leaveTypes,      setLeaveTypes]      = useState([]);
   const [leaveStatuses,   setLeaveStatuses]   = useState([]);
-  const [showAll,         setShowAll]         = useState(true);
+  const [showAll,         setShowAll]         = useState(false);
   const [searchEmployee,  setSearchEmployee]  = useState('');
   const [searchProject,   setSearchProject]  = useState('');
   const [empData,         setEmpData]         = useState({ date_strip: [], employees: [] });
@@ -131,6 +131,7 @@ export default function Dashboard() {
               onDateClick={(date) => setDetailCtx({ type: 'day', date: new Date(date), startDate, endDate })}
               scrollRef={empScrollRef}
               projectCells={projectCellsByDate}
+              showAll={showAll}
             />
           </div>
           <DraggableDivider onResize={handleResize} />

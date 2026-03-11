@@ -490,14 +490,14 @@ def project_cell_details(request):
     #active memebers of this project
 
     today = date.today()
-    member_ids = ProjectAssignment.filter(
+    member_ids = ProjectAssignment.objects.filter(
         project = project,
         is_active = True,
         assigned_from__lte = today,
         assigned_till__isnull = True,
     ).values_list("user_id" , flat = True)
 
-    members = Users.objects.filter(id__in = member_ids , is_active = True)
+    members = User.objects.filter(id__in = member_ids , is_active = True)
 
     #leaves on target date for this project
 
@@ -543,7 +543,7 @@ def project_cell_details(request):
             }
         employees_payload.append(entry)
 
-        return Response({
+    return Response({
             "project" : {
                 "project_id": project.id,
                 "project_name" : project.project_name,
