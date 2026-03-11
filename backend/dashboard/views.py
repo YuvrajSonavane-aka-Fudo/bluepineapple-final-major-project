@@ -655,7 +655,7 @@ def project_cell_details(request):
 #             "assigned_employees": assigned_count,
 #             "employees_on_leave": on_leave_count,
 #             "available_workforce": available,
-#             "risk_level":calculate_risk_level(project, available),
+#             "risk_level":calculate_risk_level(project, available , assigned_count),
 #         })
 
 #     # Build employees-on-leave list
