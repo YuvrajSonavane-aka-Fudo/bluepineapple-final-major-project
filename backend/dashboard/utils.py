@@ -71,13 +71,16 @@ def parse_date(request, field):
         raise ValueError(f"'{field}' is required.")
     return date.fromisoformat(str(raw))
 
-def calculate_risk_level(project, available_workforce):
+def calculate_risk_level(project, assigned_count, available_workforce):
     """
     Use the project's own threshold columns to determine risk level.
       available < risk_threshold_percent % → HIGH
       available < warning_threshold_percent % → MEDIUM
       otherwise → LOW
     """
+    if assigned_count == 0:
+        return "LOW"
+        
     required = project.required_workforce
     if required == 0:
         return "LOW"
