@@ -135,6 +135,21 @@ export default function EmployeePanel({
     return () => ro.disconnect();
   }, [updateThumb, dateStrip]);
 
+  // Route wheel events on the body area to syncAll for smooth horizontal scroll
+  const bodyRef = useRef(null);
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      const current = headerRef.current?.scrollLeft || 0;
+      syncAll(Math.max(0, current + e.deltaX));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [syncAll]);
+
   const todayIdx  = dateStrip.findIndex(d => isToday(parseISO(d.date)));
   const todayLeft = todayIdx >= 0 ? todayIdx * CELL_W : null;
 
@@ -182,7 +197,7 @@ export default function EmployeePanel({
       </div>
 
       {/* ── Body ── */}
-      <div style={s.body}>
+      <div style={s.body} ref={bodyRef}>
         {loading
           ? <LoadingRows />
           : filtered.length === 0
@@ -221,7 +236,7 @@ export default function EmployeePanel({
                             cell={emp.cells?.[d.date]}
                             dateInfo={d}
                             isFirst={di === 0}
-                            onClick={(e) => onCellClick(emp, d.date,e)}
+                            onClick={(rect) => onCellClick(emp, d.date, rect)}
                           />
                         ))}
                       </div>
@@ -355,7 +370,7 @@ const s = {
   },
   cellsRow: {
     flex: 1,
-    overflowX: 'scroll', overflowY: 'hidden',
+    overflowX: 'hidden', overflowY: 'hidden',
     display: 'flex', alignItems: 'flex-start',
     scrollbarWidth: 'none', msOverflowStyle: 'none',
     position: 'relative',

@@ -397,7 +397,7 @@ def employee_cell_details(request):
     projects_payload = []
     for project in emp_projects:
         leave = leave_by_project.get(project.id)
-        if leave is None or leave.leave_type =="WFH":
+        if leave is None or leave.leave_type == "WFH":
             entry = {
                 "project_id" : project.id,
                 "project_name": project.project_name,

@@ -1,11 +1,4 @@
 // src/components/shared/RiskCell.jsx
-// ALL colors match Legend.jsx RISK LEVELS exactly
-
-// Legend:
-//   Low Risk    bg:#ECFDF5  border:#86EFAC  text:#16A34A
-//   Medium Risk bg:#FFF7ED  border:#FDBA74  text:#EA580C
-//   High Risk   bg:#FEF2F2  border:#FCA5A5  text:#DC2626
-
 const RISK_CFG = {
   HIGH:   { bg: '#FEF2F2', text: '#DC2626', border: '#FCA5A5' },
   MEDIUM: { bg: '#FFF7ED', text: '#EA580C', border: '#FDBA74' },
@@ -35,12 +28,19 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   if (isHoliday && !isWeekend) cellBg = '#fefce8';
   if (isToday) cellBg = '#fff7ed';
 
-  // No leave data or zero on leave → show as Low Risk or empty
+  // Capture rect synchronously inside the handler, pass plain rect object up
+  const handleClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    onClick(rect);
+  };
+
   if (!cell || cell.employees_on_leave === 0) {
     const pct = cell ? Math.round((cell.available_workforce / (cell.assigned_employees || 1)) * 100) : null;
     return (
-      <div onClick={cell ? onClick : undefined}
-        style={{ ...sharedStyle, background: (isWeekend || isHoliday) ? cellBg : (cell ? RISK_CFG.LOW.bg : '#ffffff'), cursor: cell ? 'pointer' : 'default' }}>
+      <div
+        onClick={cell ? handleClick : undefined}
+        style={{ ...sharedStyle, background: (isWeekend || isHoliday) ? cellBg : (cell ? RISK_CFG.LOW.bg : '#ffffff'), cursor: cell ? 'pointer' : 'default' }}
+      >
         {cell && !isWeekend && (
           <span style={{ fontSize: 11, fontWeight: 700, color: RISK_CFG.LOW.text, fontFamily: "'DM Mono', monospace" }}>
             {pct}%
@@ -54,9 +54,11 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   const pct = Math.round((cell.available_workforce / (cell.assigned_employees || 1)) * 100);
 
   return (
-    <div onClick={onClick}
+    <div
+      onClick={handleClick}
       title={`${cell.available_workforce}/${cell.assigned_employees} available`}
-      style={{ ...sharedStyle, background: (isWeekend || isHoliday) ? cellBg : cfg.bg, cursor: 'pointer' }}>
+      style={{ ...sharedStyle, background: (isWeekend || isHoliday) ? cellBg : cfg.bg, cursor: 'pointer' }}
+    >
       {!isWeekend && (
         <span style={{ fontSize: 11, fontWeight: 700, color: cfg.text, fontFamily: "'DM Mono', monospace" }}>
           {pct}%
