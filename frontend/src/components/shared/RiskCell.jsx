@@ -1,11 +1,13 @@
 // src/components/shared/RiskCell.jsx
-const RISK_CFG = {
-  HIGH:   { bg: '#FEF2F2', text: '#DC2626', border: '#FCA5A5' },
-  MEDIUM: { bg: '#FFF7ED', text: '#EA580C', border: '#FDBA74' },
-  LOW:    { bg: '#ECFDF5', text: '#16A34A', border: '#86EFAC' },
+
+const RISK_RGB = {
+  HIGH:   { r: 239, g: 68,  b: 68  },
+  MEDIUM: { r: 245, g: 158, b: 11  },
+  LOW:    { r: 34,  g: 197, b: 94  },
 };
 
 export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) {
+
   const isWeekend = dateInfo?.is_weekend;
   const isHoliday = dateInfo?.is_public_holiday;
 
@@ -13,8 +15,13 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   const tb = '1px solid #994545';
 
   const sharedStyle = {
-    width: 35, minWidth: 35, height: 35, flexShrink: 0,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 35,
+    minWidth: 35,
+    height: 35,
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderTop: 'none',
     borderLeft: isToday ? tb : (isFirst ? nb : 'none'),
     borderRight: isToday ? tb : nb,
@@ -24,46 +31,60 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   };
 
   let cellBg = '#ffffff';
-  if (isWeekend) cellBg = 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)';
-  if (isHoliday && !isWeekend) cellBg = '#fefce8';
-  if (isToday) cellBg = '#fff7ed';
 
-  // Capture rect synchronously inside the handler, pass plain rect object up
+  if (isWeekend) {
+    cellBg =
+      'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)';
+  }
+
+  if (isHoliday && !isWeekend) {
+    cellBg = '#fefce8';
+  }
+
   const handleClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     onClick(rect);
   };
 
-  if (!cell || cell.employees_on_leave === 0) {
-    const pct = cell ? Math.round((cell.available_workforce / (cell.assigned_employees || 1)) * 100) : null;
-    return (
-      <div
-        onClick={cell ? handleClick : undefined}
-        style={{ ...sharedStyle, background: (isWeekend || isHoliday) ? cellBg : (cell ? RISK_CFG.LOW.bg : '#ffffff'), cursor: cell ? 'pointer' : 'default' }}
-      >
-        {cell && !isWeekend && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: RISK_CFG.LOW.text, fontFamily: "'DM Mono', monospace" }}>
-            {pct}%
-          </span>
-        )}
-      </div>
-    );
-  }
+  const pct = cell
+    ? Math.round((cell.available_workforce / (cell.assigned_employees || 1)) * 100)
+    : null;
 
-  const cfg = RISK_CFG[cell.risk_level] || RISK_CFG.LOW;
-  const pct = Math.round((cell.available_workforce / (cell.assigned_employees || 1)) * 100);
+  const showRiskColor =
+    !isWeekend &&
+    !isHoliday &&
+    pct !== null &&
+    pct > 0 &&
+    pct < 100;
+
+  let bg = cellBg;
+
+  if (showRiskColor) {
+
+    // Determine risk from percentage (matches legend)
+    let risk;
+    if (pct < 40) risk = 'HIGH';
+    else if (pct <= 75) risk = 'MEDIUM';
+    else risk = 'LOW';
+
+    const rgb = RISK_RGB[risk];
+
+    // Heatmap intensity
+    const severity = 1 - pct / 100;
+    const opacity = Math.min(0.9, 0.25 + severity * 0.75);
+
+    bg = `rgba(${rgb.r},${rgb.g},${rgb.b},${opacity})`;
+  }
 
   return (
     <div
-      onClick={handleClick}
-      title={`${cell.available_workforce}/${cell.assigned_employees} available`}
-      style={{ ...sharedStyle, background: (isWeekend || isHoliday) ? cellBg : cfg.bg, cursor: 'pointer' }}
-    >
-      {!isWeekend && (
-        <span style={{ fontSize: 11, fontWeight: 700, color: cfg.text, fontFamily: "'DM Mono', monospace" }}>
-          {pct}%
-        </span>
-      )}
-    </div>
+      onClick={cell ? handleClick : undefined}
+      title={cell ? `${cell.available_workforce}/${cell.assigned_employees} available` : undefined}
+      style={{
+        ...sharedStyle,
+        background: bg,
+        cursor: cell ? 'pointer' : 'default',
+      }}
+    />
   );
 }
