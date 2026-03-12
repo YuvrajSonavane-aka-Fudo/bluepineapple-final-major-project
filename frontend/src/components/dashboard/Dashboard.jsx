@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [leaveTypes,      setLeaveTypes]      = useState([]);
   const [leaveStatuses,   setLeaveStatuses]   = useState([]);
   const [showAll,         setShowAll]         = useState(false);
+  const [hideWeekends,    setHideWeekends]    = useState(false);
   const [searchEmployee,  setSearchEmployee]  = useState('');
   const [searchProject,   setSearchProject]  = useState('');
   const [empData,         setEmpData]         = useState({ date_strip: [], employees: [] });
@@ -79,6 +80,14 @@ export default function Dashboard() {
     setSearchEmployee(''); setSearchProject(''); setDetailCtx(null);
   };
 
+  // Filter out weekends from date strips when hideWeekends is on
+  const filteredEmpDateStrip  = hideWeekends
+    ? (empData.date_strip  || []).filter(d => !d.is_weekend)
+    : (empData.date_strip  || []);
+  const filteredProjDateStrip = hideWeekends
+    ? (projData.date_strip || []).filter(d => !d.is_weekend)
+    : (projData.date_strip || []);
+
   const projectCellsByDate = {};
   (projData.projects || []).forEach(proj => {
     Object.entries(proj.cells || {}).forEach(([date, cell]) => {
@@ -111,7 +120,6 @@ export default function Dashboard() {
         selectedProjectIds={selectedProjIds} onProjectsChange={setSelectedProjIds}
         leaveTypes={leaveTypes} onLeaveTypesChange={setLeaveTypes}
         leaveStatuses={leaveStatuses} onLeaveStatusesChange={setLeaveStatuses}
-        showAll={showAll} onShowAllChange={setShowAll}
         onRefresh={fetchAll} onClear={handleClear}
         loading={loadingEmp || loadingProj}
       />
@@ -120,7 +128,7 @@ export default function Dashboard() {
         <div style={s.gridArea} ref={containerRef}>
           <div style={{ height: empHeight ?? '50%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <EmployeePanel
-              dateStrip={empData.date_strip}
+              dateStrip={filteredEmpDateStrip}
               employees={empData.employees || []}
               loading={loadingEmp}
               searchValue={searchEmployee}
@@ -135,7 +143,7 @@ export default function Dashboard() {
           <DraggableDivider onResize={handleResize} />
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <ProjectPanel
-              dateStrip={projData.date_strip}
+              dateStrip={filteredProjDateStrip}
               projects={projData.projects || []}
               loading={loadingProj}
               searchValue={searchProject}
@@ -148,8 +156,13 @@ export default function Dashboard() {
           </div>
         </div>
         <div style={{ position: 'relative', display: 'flex' }}>
-          <div style={{ width: legendVisible ? 200 : 0, transition: 'width 0.3s ease', overflow: 'hidden' }}>
-            <Legend />
+          <div style={{ width: legendVisible ? 220 : 0, transition: 'width 0.3s ease', overflow: 'hidden' }}>
+            <Legend
+              showAll={showAll}
+              onShowAllChange={setShowAll}
+              hideWeekends={hideWeekends}
+              onHideWeekendsChange={setHideWeekends}
+            />
           </div>
           <button onClick={() => setLegendVisible(!legendVisible)} style={{
             position: 'absolute', left: -30, top: 10,

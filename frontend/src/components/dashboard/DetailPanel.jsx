@@ -17,7 +17,7 @@ function safeDate(d) {
 const LEAVE_COLORS = {
   Paid: '#2563eb',
   Unpaid: '#93c5fd',
-  WFH: '#06b6d4',
+  WFH: '#59be68',
   'Half Day': '#0891b2',
 };
 
@@ -105,7 +105,6 @@ export default function DetailPanel({ context, onClose, filters }) {
   }, [context, projectIdsKey, leaveStatusesKey, leaveTypesKey]);
 
 
-
   useLayoutEffect(() => {
 
     if (!context || !panelRef.current) return;
@@ -135,7 +134,6 @@ export default function DetailPanel({ context, onClose, filters }) {
   }, [context, data]);
 
 
-
   if (!context) return null;
 
   const { type, date } = context;
@@ -156,8 +154,6 @@ export default function DetailPanel({ context, onClose, filters }) {
     project:  `${context.project?.project_name || 'Project'} · ${dateLabel}`,
     day:      `Day Overview · ${dateLabel}`,
   };
-
-
 
   return (
     <>
@@ -208,7 +204,6 @@ export default function DetailPanel({ context, onClose, filters }) {
 }
 
 
-
 function EmployeeView({ data }) {
 
   const projects = data?.projects || [];
@@ -234,10 +229,9 @@ function EmployeeView({ data }) {
                       : ''}
                   </div>
                 )}
-
               </div>
 
-              <Avail s={p.availability} />
+              <Avail hasLeave={!!p.leave_type} isHalfDay={p.is_half_day} />
 
             </Row>
           ))
@@ -247,27 +241,34 @@ function EmployeeView({ data }) {
 }
 
 
-
 function ProjectView({ data }) {
 
   const emps = data?.employees || [];
-  const onLeave = emps.filter(e => e?.availability !== 'AVAILABLE');
-  const risk = calcRisk(onLeave.length, emps.length);
+
+  // ✅ Single source of truth: derive everything from leave_type + is_half_day
+  // This guarantees stats always match what the list renders
+  const withLeave  = emps.filter(e => !!e?.leave_type);           // anyone with any leave
+  const partialOut = withLeave.filter(e =>  e?.is_half_day);      // half day  → Partial
+  const fullyOut   = withLeave.filter(e => !e?.is_half_day);      // full day  → Unavailable
+  const availCount = emps.length - withLeave.length;              // no leave  → Available
+
+  const risk = calcRisk(withLeave.length, emps.length);
 
   return (
     <>
       <div style={s.statsRow}>
-        <Mini label="Total" val={emps.length} />
-        <Mini label="On Leave" val={onLeave.length} c="#dc2626" />
-        <Mini label="Available" val={emps.length - onLeave.length} c="#16a34a" />
+        <Mini label="Total"     val={emps.length}      />
+        <Mini label="On Leave"  val={fullyOut.length}  c="#dc2626" />
+        <Mini label="Partial"   val={partialOut.length} c="#d97706" />
+        <Mini label="Available" val={availCount}       c="#16a34a" />
         <RiskTag risk={risk} />
       </div>
 
-      <Label>ON LEAVE ({onLeave.length})</Label>
+      <Label>ON LEAVE ({withLeave.length})</Label>
 
-      {onLeave.length === 0
+      {withLeave.length === 0
         ? <Empty>All available.</Empty>
-        : onLeave.map(emp => (
+        : withLeave.map(emp => (
             <Row key={emp.user_id}>
 
               <div style={s.rowMain}>
@@ -292,7 +293,7 @@ function ProjectView({ data }) {
 
               </div>
 
-              <Avail s={emp.availability} />
+              <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} />
 
             </Row>
           ))
@@ -302,10 +303,9 @@ function ProjectView({ data }) {
 }
 
 
-
 function DayView({ data }) {
 
-  const emps = data?.employees_on_leave || [];
+  const emps     = data?.employees_on_leave || [];
   const projects = (data?.projects || []).filter(
     p => p.employees_on_leave > 0
   );
@@ -323,7 +323,17 @@ function DayView({ data }) {
               <Row key={emp.user_id}>
                 <div style={s.rowMain}>
                   <div style={s.rowName}>{emp.full_name}</div>
+                  {emp.leave_type && (
+                    <div style={s.rowSub}>
+                      <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
+                      {emp.leave_type}
+                      {emp.is_half_day && emp.half_day_session
+                        ? ` · ${emp.half_day_session}`
+                        : ''}
+                    </div>
+                  )}
                 </div>
+                <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} />
               </Row>
             ))
         }
@@ -363,31 +373,13 @@ function DayView({ data }) {
 }
 
 
-
-const AVAIL_LABEL = {
-  NOT_AVAILABLE: 'Unavailable',
-  PARTIALLY_AVAILABLE: 'Partial',
-  ON_LEAVE: 'On Leave',
-  AVAILABLE: 'Available'
-};
-
-const AVAIL_COLOR = {
-  NOT_AVAILABLE: '#dc2626',
-  PARTIALLY_AVAILABLE: '#d97706',
-  ON_LEAVE: '#dc2626',
-  AVAILABLE: '#16a34a'
-};
-
-function Avail({ s: status }) {
-  return (
-    <span style={{
-      fontSize: 10,
-      fontWeight: 600,
-      color: AVAIL_COLOR[status] || '#9aa0ad'
-    }}>
-      {AVAIL_LABEL[status] || status}
-    </span>
-  );
+// no leave  → Available   (green)
+// half day  → Partial     (amber)
+// full day  → Unavailable (red)
+function Avail({ hasLeave, isHalfDay }) {
+  if (!hasLeave) return <span style={{ fontSize: 10, fontWeight: 600, color: '#16a34a' }}>Available</span>;
+  if (isHalfDay) return <span style={{ fontSize: 10, fontWeight: 600, color: '#d97706' }}>Partial</span>;
+  return               <span style={{ fontSize: 10, fontWeight: 600, color: '#dc2626' }}>Unavailable</span>;
 }
 
 function Dot({ color }) {
@@ -423,6 +415,7 @@ function Row({ children }) {
     <div style={{
       display: 'flex',
       justifyContent: 'space-between',
+      alignItems: 'center',
       padding: '6px 8px',
       borderRadius: 6,
       background: '#f8f9fb',
@@ -497,7 +490,6 @@ function Spinner() {
 }
 
 
-
 const s = {
   panel: {
     position: 'fixed',
@@ -561,7 +553,10 @@ const s = {
   },
   rowSub: {
     fontSize: 10,
-    color: '#9aa0ad'
+    color: '#9aa0ad',
+    display: 'flex',
+    alignItems: 'center',
+    marginTop: 2,
   },
   dayGrid: {
     display: 'flex'

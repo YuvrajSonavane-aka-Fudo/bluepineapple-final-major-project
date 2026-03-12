@@ -4,7 +4,7 @@
 const LEAVE_TYPES = [
   { label: 'Paid Leave', color: '#2563EB' },
   { label: 'Unpaid Leave', color: '#93C5FD' },
-  { label: 'WFO', color: '#59be68' },
+  { label: 'WFH', color: '#59be68' },
 ];
 
 const DAY_PORTION = [
@@ -27,14 +27,47 @@ const TIMELINE = [
 ];
 
 const RISK_LEVELS = [
-  { label: 'Low Risk (>75%)', bg: '#b2f5d6', border: '#44ff88' },
-  { label: 'Medium Risk (40–75%)', bg: '#ffe2be', border: '#FDBA74' },
-  { label: 'High Risk (<40%)', bg: '#ffcdcd', border: '#FCA5A5' },
+  { label: 'Low Risk (>75%)', bg: '#86EFAC', border: '#44ff88' },
+  { label: 'Medium Risk (40–75%)', bg: '#FCD34D', border: '#FDBA74' },
+  { label: 'High Risk (<40%)', bg: '#FCA5A5', border: '#FCA5A5' },
 ];
 
-export default function Legend() {
+export default function Legend({ showAll, onShowAllChange, hideWeekends, onHideWeekendsChange }) {
   return (
     <div style={s.root}>
+
+      {/* ── Filters section at top ── */}
+      <div style={{ ...s.section, borderBottom: '1px solid #e5e7eb' }}>
+        <p style={s.sectionTitle}>FILTERS</p>
+        <div style={s.sectionBody}>
+
+          {/* All Employees toggle */}
+          <div style={s.toggleRow}>
+            <span style={s.toggleLabel}>All Employees</span>
+            <div
+              onClick={() => onShowAllChange(!showAll)}
+              style={{ ...s.toggle, background: showAll ? '#3b82f6' : '#d1d5db' }}
+              title={showAll ? 'Showing all employees' : 'Showing only employees with leave'}
+            >
+              <div style={{ ...s.toggleThumb, transform: showAll ? 'translateX(18px)' : 'translateX(2px)' }} />
+            </div>
+          </div>
+
+          {/* Hide Weekends toggle */}
+          <div style={s.toggleRow}>
+            <span style={s.toggleLabel}>Hide Weekends</span>
+            <div
+              onClick={() => onHideWeekendsChange(!hideWeekends)}
+              style={{ ...s.toggle, background: hideWeekends ? '#3b82f6' : '#d1d5db' }}
+              title={hideWeekends ? 'Weekends hidden' : 'Weekends visible'}
+            >
+              <div style={{ ...s.toggleThumb, transform: hideWeekends ? 'translateX(18px)' : 'translateX(2px)' }} />
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <Section title="LEAVE TYPES">
         {LEAVE_TYPES.map(item => (
           <div key={item.label} style={s.row}>
@@ -188,6 +221,7 @@ const s = {
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
     padding: '10px 0 8px',
+    margin: 0,
   },
 
   sectionBody: {
@@ -270,7 +304,7 @@ const s = {
     width: 20,
     height: 16,
     borderRadius: 3,
-    background:'#d5acac',
+    background:'#ffe2e2',
   },
 
   holiday: {
@@ -285,5 +319,40 @@ const s = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
+  },
+
+  // Toggle styles
+  toggleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+
+  toggleLabel: {
+    fontSize: 12,
+    color: '#4B5563',
+    flexShrink: 0,
+  },
+
+  toggle: {
+    width: 38,
+    height: 20,
+    borderRadius: 99,
+    cursor: 'pointer',
+    position: 'relative',
+    transition: 'background 200ms',
+    flexShrink: 0,
+  },
+
+  toggleThumb: {
+    position: 'absolute',
+    top: 2,
+    width: 16,
+    height: 16,
+    borderRadius: '50%',
+    background: '#fff',
+    transition: 'transform 200ms',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
   },
 };
