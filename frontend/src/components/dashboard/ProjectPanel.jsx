@@ -124,22 +124,22 @@ export default function ProjectPanel({
     return () => ro.disconnect();
   }, [updateThumb, dateStrip]);
 
-  // Intercept wheel on every cellsRow — prevent individual row scroll, route through syncAll
+
+
+  // Route wheel events on the body area to syncAll for smooth horizontal scroll
+  const bodyRef = useRef(null);
   useEffect(() => {
-    const handlers = [];
-    rowRefs.current.forEach(el => {
-      if (!el) return;
-      const handler = (e) => {
-        e.preventDefault();
-        const delta   = Math.abs(e.deltaX) >= Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-        const current = headerRef.current?.scrollLeft || 0;
-        syncAll(Math.max(0, current + delta));
-      };
-      el.addEventListener('wheel', handler, { passive: false });
-      handlers.push({ el, handler });
-    });
-    return () => handlers.forEach(({ el, handler }) => el.removeEventListener('wheel', handler));
-  }, [filtered.length, syncAll]);
+    const el = bodyRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return; // let vertical scroll pass through
+      e.preventDefault();
+      const current = headerRef.current?.scrollLeft || 0;
+      syncAll(Math.max(0, current + e.deltaX));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [syncAll]);
 
   const todayIdx  = dateStrip.findIndex(d => isToday(parseISO(d.date)));
   const todayLeft = todayIdx >= 0 ? todayIdx * CELL_W : null;
@@ -186,7 +186,7 @@ export default function ProjectPanel({
       </div>
 
       {/* Body */}
-      <div style={s.body}>
+      <div style={s.body} ref={bodyRef}>
         {loading ? <LoadingRows /> : filtered.length === 0 ? <Empty searchValue={searchValue} /> : (
           filtered.map((proj, idx) => (
             <div key={proj.project_id} style={s.row}>
@@ -198,6 +198,7 @@ export default function ProjectPanel({
                 style={s.cellsRow}
                 ref={el => { rowRefs.current[idx] = el; }}
                 onScroll={e => syncAll(e.currentTarget.scrollLeft)}
+
               >
                 {todayLeft !== null && (
                   <div style={{
@@ -208,7 +209,7 @@ export default function ProjectPanel({
                     pointerEvents: 'none', zIndex: 10, boxSizing: 'border-box',
                   }} />
                 )}
-                <div style={{ display: 'flex', height: ROW_H }}>
+                <div style={{ display: 'flex', height: ROW_H, flexShrink: 0 }}>
                   {dateStrip.map((d, di) => (
                     <RiskCell
                       key={d.date}
@@ -216,7 +217,7 @@ export default function ProjectPanel({
                       dateInfo={d}
                       isFirst={di === 0}
                       isToday={isToday(parseISO(d.date))}
-                      onClick={(e) => onCellClick(proj, d.date,e)}
+                      onClick={(rect) => onCellClick(proj, d.date, rect)}
                     />
                   ))}
                 </div>
@@ -333,7 +334,8 @@ const s = {
     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
   },
   cellsRow: {
-    flex: 1, overflowX: 'hidden', overflowY: 'hidden',
+    flex: 1,
+    overflowX: 'hidden', overflowY: 'hidden',
     display: 'flex', alignItems: 'flex-start',
     scrollbarWidth: 'none', msOverflowStyle: 'none',
     position: 'relative',

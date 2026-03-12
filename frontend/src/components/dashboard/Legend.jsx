@@ -27,9 +27,9 @@ const TIMELINE = [
 ];
 
 const RISK_LEVELS = [
-  { label: 'Low Risk (>75%)', bg: '#ECFDF5', border: '#86EFAC' },
-  { label: 'Medium Risk (40–75%)', bg: '#FFF7ED', border: '#FDBA74' },
-  { label: 'High Risk (<40%)', bg: '#FEF2F2', border: '#FCA5A5' },
+  { label: 'Low Risk (>75%)', bg: '#b2f5d6', border: '#44ff88' },
+  { label: 'Medium Risk (40–75%)', bg: '#ffe2be', border: '#FDBA74' },
+  { label: 'High Risk (<40%)', bg: '#ffcdcd', border: '#FCA5A5' },
 ];
 
 export default function Legend() {

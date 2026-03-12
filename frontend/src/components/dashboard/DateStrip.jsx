@@ -46,7 +46,10 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
         return (
           <div
             key={d.date}
-            onClick={(e) => onDateClick && onDateClick(d.date,e)}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              onDateClick && onDateClick(d.date, rect);
+            }}
             style={{
               width: CELL_W,
               minWidth: CELL_W,

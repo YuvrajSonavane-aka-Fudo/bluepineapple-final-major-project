@@ -94,16 +94,13 @@ export default function Dashboard() {
     Object.entries(emp.cells || {}).forEach(([date, cell]) => { if (cell) employeeCellsByDate[date] = true; });
   });
 
-  const makeCtx = (e, extra, preferAbove) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    return {
-      ...extra, startDate, endDate,
-      anchorX: rect.left + rect.width / 2,
-      anchorY: rect.bottom,
-      anchorYTop: rect.top,
-      preferAbove: !!preferAbove,
-    };
-  };
+  const makeCtx = (rect, extra, preferAbove) => ({
+    ...extra, startDate, endDate,
+    anchorX:    rect.left + rect.width / 2,
+    anchorY:    rect.bottom,
+    anchorYTop: rect.top,
+    preferAbove,
+  });
 
   return (
     <div style={s.root}>
@@ -128,8 +125,8 @@ export default function Dashboard() {
               loading={loadingEmp}
               searchValue={searchEmployee}
               onSearchChange={setSearchEmployee}
-              onCellClick={(emp, date, e) => setDetailCtx(makeCtx(e, { type: 'employee', emp, date: new Date(date) }, false))}
-              onDateClick={(date, e) => setDetailCtx(makeCtx(e, { type: 'day', date: new Date(date) }, false))}
+              onCellClick={(emp, date, rect) => setDetailCtx(makeCtx(rect, { type: 'employee', emp, date: new Date(date) }, false))}
+              onDateClick={(date, rect) => setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, false))}
               scrollRef={empScrollRef}
               projectCells={projectCellsByDate}
               showAll={showAll}
@@ -143,8 +140,8 @@ export default function Dashboard() {
               loading={loadingProj}
               searchValue={searchProject}
               onSearchChange={setSearchProject}
-              onCellClick={(proj, date, e) => setDetailCtx(makeCtx(e, { type: 'project', project: proj, date: new Date(date) }, true))}
-              onDateClick={(date, e) => setDetailCtx(makeCtx(e, { type: 'day', date: new Date(date) }, true))}
+              onCellClick={(proj, date, rect) => setDetailCtx(makeCtx(rect, { type: 'project', project: proj, date: new Date(date) }, true))}
+              onDateClick={(date, rect) => setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, true))}
               scrollRef={projScrollRef}
               employeeCells={employeeCellsByDate}
             />
