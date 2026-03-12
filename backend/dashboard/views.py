@@ -397,7 +397,7 @@ def employee_cell_details(request):
     projects_payload = []
     for project in emp_projects:
         leave = leave_by_project.get(project.id)
-        if leave is None:
+        if leave is None or leave.leave_type =="WFH":
             entry = {
                 "project_id" : project.id,
                 "project_name": project.project_name,
@@ -554,155 +554,155 @@ def project_cell_details(request):
 
 #ENDPOINT 7 - POST /api/v1/dashboard/day-details
 
-# @api_view(["POST"])
-# def day_details(request):
-#     """
-#     Global impact panel: full picture for one date across all visible projects.
-#     Triggered when a user clicks a date in the date strip (UC-09).
+@api_view(["POST"])
+def day_details(request):
+    """
+    Global impact panel: full picture for one date across all visible projects.
+    Triggered when a user clicks a date in the date strip (UC-09).
 
-#     Body:
-#       date           (required)
-#       start_date     (required)
-#       end_date       (required)
-#       project_ids    (optional)
-#       leave_types    (optional)
-#       leave_statuses (optional)
+    Body:
+      date           (required)
+      start_date     (required)
+      end_date       (required)
+      project_ids    (optional)
+      leave_types    (optional)
+      leave_statuses (optional)
 
-#     Returns:
-#       {
-#         date: { date, day, is_weekend, is_public_holiday },
-#         summary: { total_projects_affected, total_employees_on_leave },
-#         projects: [ { project_id, project_name, required_workforce,
-#                       assigned_employees, employees_on_leave,
-#                       available_workforce, risk_level } ],
-#         employees_on_leave: [
-#           { user_id, full_name, role, leave_type, is_half_day,
-#             half_day_session?, projects: [ { project_id, project_name } ] }
-#         ]
-#       }
-#     """
-#     user = get_user_from_request(request)
-#     if not user:
-#         return Response({"error": "Unauthorized."}, status=401)
+    Returns:
+      {
+        date: { date, day, is_weekend, is_public_holiday },
+        summary: { total_projects_affected, total_employees_on_leave },
+        projects: [ { project_id, project_name, required_workforce,
+                      assigned_employees, employees_on_leave,
+                      available_workforce, risk_level } ],
+        employees_on_leave: [
+          { user_id, full_name, role, leave_type, is_half_day,
+            half_day_session?, projects: [ { project_id, project_name } ] }
+        ]
+      }
+    """
+    user = get_user_from_request(request)
+    if not user:
+        return Response({"error": "Unauthorized."}, status=401)
 
-#     try:
-#         target_date = parse_date(request, "date")
-#     except ValueError as e:
-#         return Response({"error": str(e)}, status=400)
+    try:
+        target_date = parse_date(request, "date")
+    except ValueError as e:
+        return Response({"error": str(e)}, status=400)
 
-#     leave_types    = request.data.get("leave_types", [])
-#     leave_statuses = request.data.get("leave_statuses", [])
-#     requested_pids = request.data.get("project_ids", [])
+    leave_types    = request.data.get("leave_types", [])
+    leave_statuses = request.data.get("leave_statuses", [])
+    requested_pids = request.data.get("project_ids", [])
 
-#     accessible_ids = get_accessible_project_ids(user)
-#     scoped_pids    = [p for p in requested_pids if p in accessible_ids] if requested_pids else accessible_ids
+    accessible_ids = get_accessible_project_ids(user)
+    scoped_pids    = [p for p in requested_pids if p in accessible_ids] if requested_pids else accessible_ids
 
-#     projects_qs = Project.objects.filter(id__in=scoped_pids, is_active=True).order_by("project_name")
+    projects_qs = Project.objects.filter(id__in=scoped_pids, is_active=True).order_by("project_name")
 
-#     # Assignments for scoped projects
-#     today = date.today()
-#     assignments = ProjectAssignment.objects.filter(
-#         project_id__in=scoped_pids,
-#         is_active=True,
-#         assigned_from__lte=today,
-#         assigned_till__isnull=True,
-#     )
-#     project_members = {}   # { project_id: set(user_id) }
-#     user_projects   = {}   # { user_id: set(project_id) }
-#     all_member_ids  = set()
+    # Assignments for scoped projects
+    today = date.today()
+    assignments = ProjectAssignment.objects.filter(
+        project_id__in=scoped_pids,
+        is_active=True,
+        assigned_from__lte=today,
+        assigned_till__isnull=True,
+    )
+    project_members = {}   # { project_id: set(user_id) }
+    user_projects   = {}   # { user_id: set(project_id) }
+    all_member_ids  = set()
 
-#     for a in assignments:
-#         project_members.setdefault(a.project_id, set()).add(a.user_id)
-#         user_projects.setdefault(a.user_id, set()).add(a.project_id)
-#         all_member_ids.add(a.user_id)
+    for a in assignments:
+        project_members.setdefault(a.project_id, set()).add(a.user_id)
+        user_projects.setdefault(a.user_id, set()).add(a.project_id)
+        all_member_ids.add(a.user_id)
 
-#     # Leaves on target date across all scoped projects
-#     leave_qs = LeaveApplication.objects.filter(
-#         user_id__in=all_member_ids,
-#         project_id__in=scoped_pids,
-#         start_date__lte=target_date,
-#         end_date__gte=target_date,
-#     )
-#     leave_qs = apply_leave_filters(leave_qs, leave_types, leave_statuses)
+    # Leaves on target date across all scoped projects
+    leave_qs = LeaveApplication.objects.filter(
+        user_id__in=all_member_ids,
+        project_id__in=scoped_pids,
+        start_date__lte=target_date,
+        end_date__gte=target_date,
+    )
+    leave_qs = apply_leave_filters(leave_qs, leave_types, leave_statuses)
 
-#     # { (user_id, project_id): leave }
-#     leave_by_user_project = {}
-#     # Also track unique users on leave: { user_id: leave } (any one leave record)
-#     any_leave_by_user = {}
-#     for leave in leave_qs.select_related("user"):
-#         leave_by_user_project[(leave.user_id, leave.project_id)] = leave
-#         any_leave_by_user[leave.user_id] = leave
+    # { (user_id, project_id): leave }
+    leave_by_user_project = {}
+    # Also track unique users on leave: { user_id: leave } (any one leave record)
+    any_leave_by_user = {}
+    for leave in leave_qs.select_related("user"):
+        leave_by_user_project[(leave.user_id, leave.project_id)] = leave
+        any_leave_by_user[leave.user_id] = leave
 
-#     # Build project summaries
-#     projects_payload   = []
-#     affected_pids      = set()
+    # Build project summaries
+    projects_payload   = []
+    affected_pids      = set()
 
-#     for project in projects_qs:
-#         member_ids     = project_members.get(project.id, set())
-#         assigned_count = len(member_ids)
-#         on_leave_count = sum(
-#             1 for uid in member_ids
-#             if (uid, project.id) in leave_by_user_project
-#         )
-#         available = assigned_count - on_leave_count
-#         if on_leave_count > 0:
-#             affected_pids.add(project.id)
+    for project in projects_qs:
+        member_ids     = project_members.get(project.id, set())
+        assigned_count = len(member_ids)
+        on_leave_count = sum(
+            1 for uid in member_ids
+            if (uid, project.id) in leave_by_user_project
+        )
+        available = assigned_count - on_leave_count
+        if on_leave_count > 0:
+            affected_pids.add(project.id)
 
-#         projects_payload.append({
-#             "project_id":project.id,
-#             "project_name":project.project_name,
-#             "required_workforce": project.required_workforce,
-#             "assigned_employees": assigned_count,
-#             "employees_on_leave": on_leave_count,
-#             "available_workforce": available,
-#             "risk_level":calculate_risk_level(project, available , assigned_count),
-#         })
+        projects_payload.append({
+            "project_id":project.id,
+            "project_name":project.project_name,
+            "required_workforce": project.required_workforce,
+            "assigned_employees": assigned_count,
+            "employees_on_leave": on_leave_count,
+            "available_workforce": available,
+            "risk_level":calculate_risk_level(project, available , assigned_count),
+        })
 
-#     # Build employees-on-leave list
-#     on_leave_users = User.objects.filter(
-#         id__in=any_leave_by_user.keys()
-#     ).order_by("full_name")
+    # Build employees-on-leave list
+    on_leave_users = User.objects.filter(
+        id__in=any_leave_by_user.keys()
+    ).order_by("full_name")
 
-#     employees_on_leave_payload = []
-#     for emp in on_leave_users:
-#         leave = any_leave_by_user[emp.id]
+    employees_on_leave_payload = []
+    for emp in on_leave_users:
+        leave = any_leave_by_user[emp.id]
 
-#         # All scoped projects this employee is assigned to
-#         emp_pids_in_scope = user_projects.get(emp.id, set()) & set(scoped_pids)
-#         emp_projects_qs   = Project.objects.filter(id__in=emp_pids_in_scope).values("id", "project_name")
+        # All scoped projects this employee is assigned to
+        emp_pids_in_scope = user_projects.get(emp.id, set()) & set(scoped_pids)
+        emp_projects_qs   = Project.objects.filter(id__in=emp_pids_in_scope).values("id", "project_name")
 
-#         entry = {
-#             "user_id":emp.id,
-#             "full_name": emp.full_name,
-#             "role":emp.role,
-#             "leave_type": leave.leave_type,
-#             "is_half_day":leave.is_half_day,
-#             "projects": [
-#                 {"project_id": p["id"], "project_name": p["project_name"]}
-#                 for p in emp_projects_qs
-#             ],
-#         }
-#         if leave.is_half_day and leave.half_day_session:
-#             entry["half_day_session"] = leave.half_day_session
+        entry = {
+            "user_id":emp.id,
+            "full_name": emp.full_name,
+            "role":emp.role,
+            "leave_type": leave.leave_type,
+            "is_half_day":leave.is_half_day,
+            "projects": [
+                {"project_id": p["id"], "project_name": p["project_name"]}
+                for p in emp_projects_qs
+            ],
+        }
+        if leave.is_half_day and leave.half_day_session:
+            entry["half_day_session"] = leave.half_day_session
 
-#         employees_on_leave_payload.append(entry)
+        employees_on_leave_payload.append(entry)
 
-#     # Date metadata — check holidays table for this specific date
-#     holiday = PublicHolidays.objects.filter(holiday_date=target_date).first()
-#     date_meta = {
-#         "date":str(target_date),
-#         "day":target_date.strftime("%a"),
-#         "is_weekend":target_date.weekday() >= 5,
-#         "is_public_holiday": holiday is not None,
-#         "holiday_name": holiday.holiday_name if holiday else None,
-#     }
+    # Date metadata — check holidays table for this specific date
+    holiday = PublicHolidays.objects.filter(holiday_date=target_date).first()
+    date_meta = {
+        "date":str(target_date),
+        "day":target_date.strftime("%a"),
+        "is_weekend":target_date.weekday() >= 5,
+        "is_public_holiday": holiday is not None,
+        "holiday_name": holiday.holiday_name if holiday else None,
+    }
 
-#     return Response({
-#         "date": date_meta,
-#         "summary": {
-#             "total_projects_affected":   len(affected_pids),
-#             "total_employees_on_leave":  len(any_leave_by_user),
-#         },
-#         "projects":           projects_payload,
-#         "employees_on_leave": employees_on_leave_payload,
-#     })
+    return Response({
+        "date": date_meta,
+        "summary": {
+            "total_projects_affected":   len(affected_pids),
+            "total_employees_on_leave":  len(any_leave_by_user),
+        },
+        "projects":           projects_payload,
+        "employees_on_leave": employees_on_leave_payload,
+    })
