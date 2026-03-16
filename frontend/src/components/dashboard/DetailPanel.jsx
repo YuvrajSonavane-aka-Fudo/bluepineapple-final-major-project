@@ -109,7 +109,7 @@ export default function DetailPanel({ context, onClose, filters }) {
 
     if (!context || !panelRef.current) return;
 
-    const { anchorX, anchorY } = context;
+    const { anchorX, anchorY, preferAbove } = context;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -118,16 +118,24 @@ export default function DetailPanel({ context, onClose, filters }) {
     const modalH = rect.height;
     const modalW = rect.width;
 
+    // Horizontal: centre on anchor, clamp to viewport edges
     const left = Math.max(
       GAP,
       Math.min(vw - modalW - GAP, anchorX - modalW / 2)
     );
 
-    let top = anchorY + GAP;
-
-    if (top + modalH > vh - GAP) {
-      top = anchorY - modalH - GAP;
+    // Vertical: respect preferAbove hint, then clamp so panel never leaves viewport
+    let top;
+    if (preferAbove) {
+      top = anchorY - modalH - GAP;           // try above first
+      if (top < GAP) top = anchorY + GAP;     // no room above → go below
+    } else {
+      top = anchorY + GAP;                    // try below first
+      if (top + modalH > vh - GAP) top = anchorY - modalH - GAP;  // overflows → go above
     }
+
+    // Hard clamp — panel must always stay fully inside the viewport
+    top = Math.max(GAP, Math.min(vh - modalH - GAP, top));
 
     setPos({ top, left });
 
@@ -173,7 +181,8 @@ export default function DetailPanel({ context, onClose, filters }) {
           ...s.panel,
           width: W,
           top: pos.top,
-          left: pos.left
+          left: pos.left,
+          visibility: pos.top === 0 && pos.left === 0 ? 'hidden' : 'visible',
         }}
       >
 
@@ -256,8 +265,7 @@ function ProjectView({ data }) {
   const fullyOut   = withLeave.filter(e => !e?.is_half_day && e?.leave_type !== 'WFH');
   const availCount = emps.length - withLeave.length;
 
-  // EP6 now returns risk_level using project-specific thresholds
-  // (risk_threshold_percent & warning_threshold_percent). Use it directly.
+  // EP6 returns risk_level using project-specific thresholds — use directly.
   const risk = data?.risk_level || 'LOW';
 
   return (
@@ -313,71 +321,82 @@ function ProjectView({ data }) {
 
 function DayView({ data }) {
 
-  const emps     = data?.employees_on_leave || [];
-  const projects = (data?.projects || []).filter(
-    p => p.employees_on_leave > 0
-  );
+  const emps        = data?.employees_on_leave || [];
+  const projects    = (data?.projects || []).filter(p => p.employees_on_leave > 0);
+  const dateMeta    = data?.date || {};
+  const holidayName = dateMeta.is_public_holiday ? dateMeta.holiday_name : null;
 
   return (
-    <div style={s.dayGrid}>
+    <>
+      {holidayName && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '5px 8px', marginBottom: 6,
+          background: '#fefce8', border: '1px solid #fde68a',
+          borderRadius: 6, fontSize: 11, color: '#92400e', fontWeight: 600,
+        }}>
+          <span style={{ fontSize: 13 }}>🏖️</span>
+          {holidayName}
+          <span style={{ fontWeight: 400, color: '#a16207', marginLeft: 2 }}>· Public Holiday</span>
+        </div>
+      )}
 
-      <div style={s.dayCol}>
+      <div style={s.dayGrid}>
 
-        <Label>ON LEAVE ({emps.length})</Label>
+        <div style={s.dayCol}>
 
-        {emps.length === 0
-          ? <Empty>None.</Empty>
-          : emps.map(emp => (
-              <Row key={emp.user_id}>
-                <div style={s.rowMain}>
-                  <div style={s.rowName}>{emp.full_name}</div>
-                  {emp.leave_type && (
-                    <div style={s.rowSub}>
-                      <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                      {emp.leave_type}
-                      {emp.is_half_day && emp.half_day_session
-                        ? ` · ${emp.half_day_session}`
-                        : ''}
-                    </div>
-                  )}
-                </div>
-                <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} leaveType={emp.leave_type} />
-              </Row>
-            ))
-        }
+          <Label>ON LEAVE ({emps.length})</Label>
 
-      </div>
-
-      <div style={s.vDivider} />
-
-      <div style={s.dayCol}>
-
-        <Label>AFFECTED ({projects.length})</Label>
-
-        {projects.length === 0
-          ? <Empty>None.</Empty>
-          : projects.map(p => {
-
-              // EP7 (day_details) returns risk_level per project — use it directly.
-              // Calculated with project-specific risk_threshold_percent & warning_threshold_percent.
-              const risk = p.risk_level || 'LOW';
-
-              return (
-                <Row key={p.project_id}>
+          {emps.length === 0
+            ? <Empty>None.</Empty>
+            : emps.map(emp => (
+                <Row key={emp.user_id}>
                   <div style={s.rowMain}>
-                    <div style={s.rowName}>{p.project_name}</div>
-                    {/* BUG FIX: show how many employees are on leave for this project */}
-                    <div style={s.rowSub}>{p.employees_on_leave} on leave of {p.assigned_employees}</div>
+                    <div style={s.rowName}>{emp.full_name}</div>
+                    {emp.leave_type && (
+                      <div style={s.rowSub}>
+                        <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
+                        {emp.leave_type}
+                        {emp.is_half_day && emp.half_day_session
+                          ? ` · ${emp.half_day_session}`
+                          : ''}
+                      </div>
+                    )}
                   </div>
-                  <RiskTag risk={risk} />
+                  <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} leaveType={emp.leave_type} />
                 </Row>
-              );
-            })
-        }
+              ))
+          }
+
+        </div>
+
+        <div style={s.vDivider} />
+
+        <div style={s.dayCol}>
+
+          <Label>AFFECTED ({projects.length})</Label>
+
+          {projects.length === 0
+            ? <Empty>None.</Empty>
+            : projects.map(p => {
+                // EP7 (day_details) returns risk_level per project — use directly.
+                const risk = p.risk_level || 'LOW';
+                return (
+                  <Row key={p.project_id}>
+                    <div style={s.rowMain}>
+                      <div style={s.rowName}>{p.project_name}</div>
+                      <div style={s.rowSub}>{p.employees_on_leave} on leave of {p.assigned_employees}</div>
+                    </div>
+                    <RiskTag risk={risk} />
+                  </Row>
+                );
+              })
+          }
+
+        </div>
 
       </div>
-
-    </div>
+    </>
   );
 }
 
@@ -511,7 +530,8 @@ const s = {
     boxShadow: '0 8px 30px rgba(15,23,42,0.14)',
     border: '1px solid #e2e5ea',
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    maxHeight: 'calc(100vh - 40px)',  // never taller than viewport
   },
   header: {
     padding: '9px 12px',
@@ -534,7 +554,9 @@ const s = {
   },
   body: {
     overflowY: 'auto',
-    padding: '6px 10px 10px'
+    padding: '6px 10px 10px',
+    flex: 1,           // fill remaining height inside panel
+    minHeight: 0,      // allow flex child to shrink below content size
   },
   center: {
     display: 'flex',
