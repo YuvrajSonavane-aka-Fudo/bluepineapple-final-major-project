@@ -27,7 +27,7 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
         let headerBg = '#f8f9fb';
         if (isWeekend)                            headerBg = 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)';
         else if (isHoliday)                       headerBg = '#fefce8';
-        else if (hasLeave)                        headerBg = '#ffe2e2';  // dull red tint
+        else if (hasLeave)                        headerBg = '#cfcfcf';  // light grey
         else if (risk === 'HIGH')                 headerBg = '#FEF2F2';
         else if (risk === 'MEDIUM')               headerBg = '#FFF7ED';
 
@@ -75,7 +75,7 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
           >
             <span style={{
               fontSize: 10,
-              fontWeight: 600,
+              fontWeight: hasLeave? 600:500,
               color: textColor,
               letterSpacing: '0.2px',
               lineHeight: 1,
@@ -84,7 +84,7 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
             </span>
             <span style={{
               fontSize: 12,
-              fontWeight: today ? 800 : 700,
+              fontWeight: today ? 800 : hasLeave ? 700 : 400,
               color: numColor,
               fontFamily: "'DM Mono', monospace",
               lineHeight: 1,

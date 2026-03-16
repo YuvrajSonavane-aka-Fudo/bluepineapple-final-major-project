@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [loadingEmp,      setLoadingEmp]      = useState(false);
   const [loadingProj,     setLoadingProj]     = useState(false);
   const [detailCtx,       setDetailCtx]       = useState(null);
-  const [legendVisible,   setLegendVisible]   = useState(true);
+  const [legendVisible,   setLegendVisible]   = useState(false);
 
   const containerRef = useRef(null);
   const [empHeight, setEmpHeight] = useState(null);
@@ -134,7 +134,12 @@ export default function Dashboard() {
               searchValue={searchEmployee}
               onSearchChange={setSearchEmployee}
               onCellClick={(emp, date, rect) => setDetailCtx(makeCtx(rect, { type: 'employee', emp, date: new Date(date) }, false))}
-              onDateClick={(date, rect) => setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, false))}
+              onDateClick={(date, rect) => {
+                // BUG FIX: don't open Day Overview for weekends — they have no leave data
+                const info = (empData.date_strip || []).find(d => d.date === date);
+                if (info?.is_weekend) return;
+                setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, false));
+              }}
               scrollRef={empScrollRef}
               projectCells={projectCellsByDate}
               showAll={showAll}
@@ -148,15 +153,31 @@ export default function Dashboard() {
               loading={loadingProj}
               searchValue={searchProject}
               onSearchChange={setSearchProject}
+              // {/* BUG FIX: was { type: 'project', proj, ... } but DetailPanel destructures 'project' not 'proj'
+              //     → context.project was undefined → crash "Cannot read properties of undefined (reading 'project_id')" */}
               onCellClick={(proj, date, rect) => setDetailCtx(makeCtx(rect, { type: 'project', project: proj, date: new Date(date) }, true))}
-              onDateClick={(date, rect) => setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, true))}
+              onDateClick={(date, rect) => {
+                // BUG FIX: don't open Day Overview for weekends — they have no leave data
+                const info = (projData.date_strip || []).find(d => d.date === date);
+                if (info?.is_weekend) return;
+                setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, true));
+              }}
               scrollRef={projScrollRef}
               employeeCells={employeeCellsByDate}
             />
           </div>
         </div>
+
+        {/* ── Legend + toggle ── */}
         <div style={{ position: 'relative', display: 'flex' }}>
-          <div style={{ width: legendVisible ? 220 : 0, transition: 'width 0.3s ease', overflow: 'hidden' }}>
+          {/* overflowY:'auto' here — this div is bounded by the parent height, Legend content scrolls inside it */}
+          <div className="legend-scroll"  style={{
+            width: legendVisible ? 220 : 0,
+            height: '100%',
+            transition: 'width 0.3s ease',
+            overflowX: 'hidden',
+            overflowY: legendVisible ? 'auto' : 'hidden',
+          }}>
             <Legend
               showAll={showAll}
               onShowAllChange={setShowAll}
@@ -171,7 +192,7 @@ export default function Dashboard() {
             color: '#9aa0ad', zIndex: 10,
           }} title="Toggle Legend">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points={legendVisible ? "15,18 9,12 15,6" : "9,18 15,12 9,6"}/>
+              <polyline points={legendVisible ? "9,18 15,12 9,6" : "15,18 9,12 15,6"}/>
             </svg>
           </button>
         </div>
@@ -188,6 +209,6 @@ export default function Dashboard() {
 
 const s = {
   root: { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#f0f2f5' },
-  content: { flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff' },
+  content: { flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch' },
   gridArea: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
 };

@@ -397,29 +397,41 @@ def employee_cell_details(request):
     projects_payload = []
     for project in emp_projects:
         leave = leave_by_project.get(project.id)
-        if leave is None or leave.leave_type == "WFH":
+        # BUG FIX 1: WFH was merged with "no leave" so leave_type was never sent,
+        # making WFH invisible in the EmployeeView modal. Split into two branches
+        # so WFH gets its own availability status and leave_type is included.
+        if leave is None:
             entry = {
-                "project_id" : project.id,
-                "project_name": project.project_name,
+                "project_id"   : project.id,
+                "project_name" : project.project_name,
                 "availability" : "AVAILABLE",
             }
-
         elif leave.is_half_day:
+            # half-day checked FIRST — WFH half-day hits this branch → PARTIALLY_AVAILABLE
             entry = {
-                "project_id":project.id,
-                "project_name":project.project_name,
-                "availability" : "PARTIALLY_AVAILABLE",
-                "leave_type" : leave.leave_type,
-                "is_half_day" : True,
+                "project_id"       : project.id,
+                "project_name"     : project.project_name,
+                "availability"     : "PARTIALLY_AVAILABLE",
+                "leave_type"       : leave.leave_type,
+                "is_half_day"      : True,
                 "half_day_session" : leave.half_day_session,
+            }
+        elif leave.leave_type == "WFH":
+            # WFH full-day only reaches here because is_half_day is False
+            entry = {
+                "project_id"   : project.id,
+                "project_name" : project.project_name,
+                "availability" : "WFH",
+                "leave_type"   : leave.leave_type,
+                "is_half_day"  : False,
             }
         else:
             entry = {
-                "project_id":project.id,
-                "project_name":project.project_name,
+                "project_id"   : project.id,
+                "project_name" : project.project_name,
                 "availability" : "NOT_AVAILABLE",
-                "leave_type" : leave.leave_type,
-                "is_half_day" : False,
+                "leave_type"   : leave.leave_type,
+                "is_half_day"  : False,
             }
         projects_payload.append(entry)
     
@@ -518,28 +530,40 @@ def project_cell_details(request):
         leave = leave_by_user.get(emp.id)
         if leave is None:
             entry = {
-                "user_id":emp.id,
-                "full_name" : emp.full_name,
-                "role" : emp.role,
+                "user_id"      : emp.id,
+                "full_name"    : emp.full_name,
+                "role"         : emp.role,
                 "availability" : "AVAILABLE",
             }
         elif leave.is_half_day:
+            # half-day checked FIRST — WFH half-day hits this branch → PARTIALLY_AVAILABLE
             entry = {
-                "user_id" : emp.id,
-                "full_name":emp.full_name,
-                "role" : emp.role,
-                "availability" : "PARTIALLY AVAILABLE",
-                "is_half_day" : True,
+                "user_id"          : emp.id,
+                "full_name"        : emp.full_name,
+                "role"             : emp.role,
+                "availability"     : "PARTIALLY_AVAILABLE",
+                "leave_type"       : leave.leave_type,
+                "is_half_day"      : True,
                 "half_day_session" : leave.half_day_session,
+            }
+        elif leave.leave_type == "WFH":
+            # WFH full-day only reaches here because is_half_day is False
+            entry = {
+                "user_id"      : emp.id,
+                "full_name"    : emp.full_name,
+                "role"         : emp.role,
+                "availability" : "WFH",
+                "leave_type"   : leave.leave_type,
+                "is_half_day"  : False,
             }
         else:
             entry = {
-                 "user_id" : emp.id,
-                "full_name":emp.full_name,
-                "role" : emp.role,
-                "availability" : "ON_lEAVE",
-                "leave_type" : leave.leave_type,
-                "is_half_day" : False,
+                "user_id"      : emp.id,
+                "full_name"    : emp.full_name,
+                "role"         : emp.role,
+                "availability" : "ON_LEAVE",
+                "leave_type"   : leave.leave_type,
+                "is_half_day"  : False,
             }
         employees_payload.append(entry)
 
@@ -655,7 +679,9 @@ def day_details(request):
             "assigned_employees": assigned_count,
             "employees_on_leave": on_leave_count,
             "available_workforce": available,
-            "risk_level":calculate_risk_level(project, available , assigned_count),
+            # BUG FIX 3: args were swapped — signature is (project, assigned_count, available_workforce)
+            # was: calculate_risk_level(project, available, assigned_count) → wrong risk levels in DayView modal
+            "risk_level":calculate_risk_level(project, assigned_count, available),
         })
 
     # Build employees-on-leave list
