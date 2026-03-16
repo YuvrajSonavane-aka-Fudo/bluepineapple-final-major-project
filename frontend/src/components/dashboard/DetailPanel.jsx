@@ -223,15 +223,12 @@ function EmployeeView({ data }) {
                 {p.leave_type && (
                   <div style={s.rowSub}>
                     <Dot color={LEAVE_COLORS[p.leave_type] || '#9aa0ad'} />
-                    {p.leave_type}
-                    {p.is_half_day && p.half_day_session
-                      ? ` · ${p.half_day_session}`
-                      : ''}
+                    {p.leave_type}{p.is_half_day && p.half_day_session ? ` · ${p.half_day_session}` : ''}
                   </div>
                 )}
               </div>
 
-              <Avail hasLeave={!!p.leave_type} isHalfDay={p.is_half_day} />
+              <Avail hasLeave={!!p.leave_type} isHalfDay={p.is_half_day} leaveType={p.leave_type} />
 
             </Row>
           ))
@@ -245,22 +242,28 @@ function ProjectView({ data }) {
 
   const emps = data?.employees || [];
 
-  // ✅ Single source of truth: derive everything from leave_type + is_half_day
-  // This guarantees stats always match what the list renders
-  const withLeave  = emps.filter(e => !!e?.leave_type);           // anyone with any leave
-  const partialOut = withLeave.filter(e =>  e?.is_half_day);      // half day  → Partial
-  const fullyOut   = withLeave.filter(e => !e?.is_half_day);      // full day  → Unavailable
-  const availCount = emps.length - withLeave.length;              // no leave  → Available
+  // BUG FIX: derive stats correctly across all leave types
+  // - partialOut = anyone with is_half_day (including WFH half-day → Partial badge)
+  // - wfhOnly    = WFH full-day → shows as WFH badge, NOT "On Leave"
+  // - fullyOut   = non-WFH full-day leave → Unavailable badge, counted as "On Leave"
+  // - availCount = no leave at all
+  const withLeave  = emps.filter(e => !!e?.leave_type);
+  const partialOut = withLeave.filter(e =>  e?.is_half_day);
+  const wfhOnly    = withLeave.filter(e => !e?.is_half_day && e?.leave_type === 'WFH');
+  const fullyOut   = withLeave.filter(e => !e?.is_half_day && e?.leave_type !== 'WFH');
+  const availCount = emps.length - withLeave.length;
 
   const risk = calcRisk(withLeave.length, emps.length);
 
   return (
     <>
       <div style={s.statsRow}>
-        <Mini label="Total"     val={emps.length}      />
-        <Mini label="On Leave"  val={fullyOut.length}  c="#dc2626" />
+        <Mini label="Total"     val={emps.length}       />
+        <Mini label="On Leave"  val={fullyOut.length}   c="#dc2626" />
         <Mini label="Partial"   val={partialOut.length} c="#d97706" />
-        <Mini label="Available" val={availCount}       c="#16a34a" />
+        {/* BUG FIX: WFH full-day shown as its own stat, not lumped into On Leave */}
+        <Mini label="WFH"       val={wfhOnly.length}    c="#059669" />
+        <Mini label="Available" val={availCount}        c="#16a34a" />
         <RiskTag risk={risk} />
       </div>
 
@@ -276,24 +279,17 @@ function ProjectView({ data }) {
                 <div style={s.rowName}>{emp.full_name}</div>
 
                 <div style={s.rowSub}>
-                  <span style={{ color: '#b0b6c3' }}>{emp.role}</span>
-
                   {emp.leave_type && (
                     <>
                       <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                      {emp.leave_type}
+                      {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
                     </>
                   )}
-
-                  {emp.is_half_day && emp.half_day_session
-                    ? ` · ${emp.half_day_session}`
-                    : ''}
-
                 </div>
 
               </div>
 
-              <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} />
+              <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} leaveType={emp.leave_type} />
 
             </Row>
           ))
@@ -305,13 +301,27 @@ function ProjectView({ data }) {
 
 function DayView({ data }) {
 
-  const emps     = data?.employees_on_leave || [];
-  const projects = (data?.projects || []).filter(
-    p => p.employees_on_leave > 0
-  );
+  const emps        = data?.employees_on_leave || [];
+  const projects    = (data?.projects || []).filter(p => p.employees_on_leave > 0);
+  const dateMeta    = data?.date || {};
+  const holidayName = dateMeta.is_public_holiday ? dateMeta.holiday_name : null;
 
   return (
-    <div style={s.dayGrid}>
+    <>
+      {/* Show holiday name banner when the clicked date is a public holiday */}
+      {holidayName && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '5px 8px', marginBottom: 6,
+          background: '#fefce8', border: '1px solid #fde68a',
+          borderRadius: 6, fontSize: 11, color: '#92400e', fontWeight: 600,
+        }}>
+          <span style={{ fontSize: 13 }}>🏖️</span>
+          {holidayName}
+          <span style={{ fontWeight: 400, color: '#a16207', marginLeft: 2 }}>· Public Holiday</span>
+        </div>
+      )}
+      <div style={s.dayGrid}>
 
       <div style={s.dayCol}>
 
@@ -326,14 +336,11 @@ function DayView({ data }) {
                   {emp.leave_type && (
                     <div style={s.rowSub}>
                       <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                      {emp.leave_type}
-                      {emp.is_half_day && emp.half_day_session
-                        ? ` · ${emp.half_day_session}`
-                        : ''}
+                      {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
                     </div>
                   )}
                 </div>
-                <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} />
+                <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} leaveType={emp.leave_type} />
               </Row>
             ))
         }
@@ -350,15 +357,15 @@ function DayView({ data }) {
           ? <Empty>None.</Empty>
           : projects.map(p => {
 
-              const risk = calcRisk(
-                p.employees_on_leave,
-                p.assigned_employees
-              );
+              // use risk_level from backend — calculated with project-specific thresholds
+              const risk = p.risk_level || 'LOW';
 
               return (
                 <Row key={p.project_id}>
                   <div style={s.rowMain}>
                     <div style={s.rowName}>{p.project_name}</div>
+                    {/* BUG FIX: show how many employees are on leave for this project */}
+                    <div style={s.rowSub}>{p.employees_on_leave} on leave of {p.assigned_employees}</div>
                   </div>
                   <RiskTag risk={risk} />
                 </Row>
@@ -369,17 +376,21 @@ function DayView({ data }) {
       </div>
 
     </div>
+    </>
   );
 }
 
 
-// no leave  → Available   (green)
-// half day  → Partial     (amber)
-// full day  → Unavailable (red)
-function Avail({ hasLeave, isHalfDay }) {
-  if (!hasLeave) return <span style={{ fontSize: 10, fontWeight: 600, color: '#16a34a' }}>Available</span>;
-  if (isHalfDay) return <span style={{ fontSize: 10, fontWeight: 600, color: '#d97706' }}>Partial</span>;
-  return               <span style={{ fontSize: 10, fontWeight: 600, color: '#dc2626' }}>Unavailable</span>;
+// no leave       → Available      (green)
+// any half day   → Partial        (amber)  ← checked FIRST — WFH half-day is also Partial
+// WFH full day   → WFH            (teal)
+// full day leave → Unavailable    (red)
+function Avail({ hasLeave, isHalfDay, leaveType }) {
+  if (!hasLeave)           return <span style={{ fontSize: 10, fontWeight: 600, color: '#16a34a' }}>Available</span>;
+  // BUG FIX: isHalfDay checked BEFORE leaveType===WFH so WFH half-day → "Partial" not "WFH"
+  if (isHalfDay)           return <span style={{ fontSize: 10, fontWeight: 600, color: '#d97706' }}>Partial</span>;
+  if (leaveType === 'WFH') return <span style={{ fontSize: 10, fontWeight: 600, color: '#059669' }}>WFH</span>;
+  return                          <span style={{ fontSize: 10, fontWeight: 600, color: '#dc2626' }}>Unavailable</span>;
 }
 
 function Dot({ color }) {

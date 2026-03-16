@@ -23,7 +23,6 @@ const TIMELINE = [
   { label: 'Current Day', type: 'today' },
   { label: 'Weekend', type: 'weekend' },
   { label: 'Public Holiday', type: 'holiday' },
-  { label: 'Day has Leave ', type: 'day' },
 ];
 
 const RISK_LEVELS = [
@@ -192,10 +191,6 @@ function Swatch({ item }) {
     return <div style={s.holiday} />;
   }
 
-  if (type === 'day') {
-    return <div style={s.day} />;
-  }
-
   return null;
 }
 
@@ -205,7 +200,7 @@ const s = {
     minWidth: 220,
     background: '#fff',
     borderLeft: '1px solid #e5e7eb',
-    overflowY: 'auto',
+    // NO overflowY here — scrolling is handled by the wrapper div in Dashboard
     padding: '12px 0',
   },
 
@@ -298,13 +293,6 @@ const s = {
     borderRadius: 3,
     background:
       'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)',
-  },
-
-  day: {
-    width: 20,
-    height: 16,
-    borderRadius: 3,
-    background:'#ffe2e2',
   },
 
   holiday: {
