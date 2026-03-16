@@ -46,33 +46,27 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
     onClick(rect);
   };
 
-  const pct = cell
-    ? Math.round((cell.available_workforce / (cell.assigned_employees || 1)) * 100)
-    : null;
+  // Use risk_level from backend — calculated with project-specific
+  // risk_threshold_percent & warning_threshold_percent. No local recalculation.
+  const risk = cell?.risk_level || null;
 
   const showRiskColor =
     !isWeekend &&
     !isHoliday &&
-    pct !== null &&
-    pct > 0 &&
-    pct < 100;
+    risk !== null &&
+    cell?.employees_on_leave > 0;
 
   let bg = cellBg;
 
   if (showRiskColor) {
-
-    // Determine risk from percentage (matches legend)
-    let risk;
-    if (pct < 40) risk = 'HIGH';
-    else if (pct <= 75) risk = 'MEDIUM';
-    else risk = 'LOW';
-
-    const rgb = RISK_RGB[risk];
-
-    // Heatmap intensity
-    const severity = 1 - pct / 100;
-    const opacity = Math.min(0.9, 0.25 + severity * 0.75);
-
+    const rgb = RISK_RGB[risk] || RISK_RGB['LOW'];
+    // Opacity scales with on_leave/assigned ratio BUT is capped per risk level
+    // so LOW (green) never looks amber, and MEDIUM never looks red
+    const pct = cell.assigned_employees
+      ? cell.employees_on_leave / cell.assigned_employees
+      : 0;
+    const maxOpacity = risk === 'HIGH' ? 0.90 : risk === 'MEDIUM' ? 0.65 : 0.35;
+    const opacity = Math.min(maxOpacity, 0.15 + pct * 0.75);
     bg = `rgba(${rgb.r},${rgb.g},${rgb.b},${opacity})`;
   }
 

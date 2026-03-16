@@ -402,36 +402,35 @@ def employee_cell_details(request):
         # so WFH gets its own availability status and leave_type is included.
         if leave is None:
             entry = {
-                "project_id"   : project.id,
-                "project_name" : project.project_name,
+                "project_id" : project.id,
+                "project_name": project.project_name,
                 "availability" : "AVAILABLE",
             }
-        elif leave.is_half_day:
-            # half-day checked FIRST — WFH half-day hits this branch → PARTIALLY_AVAILABLE
-            entry = {
-                "project_id"       : project.id,
-                "project_name"     : project.project_name,
-                "availability"     : "PARTIALLY_AVAILABLE",
-                "leave_type"       : leave.leave_type,
-                "is_half_day"      : True,
-                "half_day_session" : leave.half_day_session,
-            }
         elif leave.leave_type == "WFH":
-            # WFH full-day only reaches here because is_half_day is False
             entry = {
-                "project_id"   : project.id,
-                "project_name" : project.project_name,
+                "project_id" : project.id,
+                "project_name": project.project_name,
                 "availability" : "WFH",
-                "leave_type"   : leave.leave_type,
-                "is_half_day"  : False,
+                "leave_type" : leave.leave_type,   # was missing — frontend dot/label needs this
+                "is_half_day" : False,
+            }
+
+        elif leave.is_half_day:
+            entry = {
+                "project_id":project.id,
+                "project_name":project.project_name,
+                "availability" : "PARTIALLY_AVAILABLE" if leave.is_half_day else "WFH",
+                "leave_type" : leave.leave_type,
+                "is_half_day" : True,
+                "half_day_session" : leave.half_day_session,
             }
         else:
             entry = {
-                "project_id"   : project.id,
-                "project_name" : project.project_name,
+                "project_id":project.id,
+                "project_name":project.project_name,
                 "availability" : "NOT_AVAILABLE",
-                "leave_type"   : leave.leave_type,
-                "is_half_day"  : False,
+                "leave_type" : leave.leave_type,
+                "is_half_day" : False,
             }
         projects_payload.append(entry)
     
@@ -530,50 +529,53 @@ def project_cell_details(request):
         leave = leave_by_user.get(emp.id)
         if leave is None:
             entry = {
-                "user_id"      : emp.id,
-                "full_name"    : emp.full_name,
-                "role"         : emp.role,
+                "user_id":emp.id,
+                "full_name" : emp.full_name,
+                "role" : emp.role,
                 "availability" : "AVAILABLE",
             }
         elif leave.is_half_day:
-            # half-day checked FIRST — WFH half-day hits this branch → PARTIALLY_AVAILABLE
             entry = {
-                "user_id"          : emp.id,
-                "full_name"        : emp.full_name,
-                "role"             : emp.role,
-                "availability"     : "PARTIALLY_AVAILABLE",
-                "leave_type"       : leave.leave_type,
-                "is_half_day"      : True,
+                "user_id" : emp.id,
+                "full_name":emp.full_name,
+                "role" : emp.role,
+                # BUG FIX 2a: typo "PARTIALLY AVAILABLE" (space) → "PARTIALLY_AVAILABLE" (underscore)
+                "availability" : "PARTIALLY_AVAILABLE" if leave.is_half_day else "WFH",
+                # BUG FIX 2b: leave_type was completely missing here — frontend
+                # ProjectView uses emp.leave_type for the colored dot and label
+                "leave_type" : leave.leave_type,
+                "is_half_day" : True,
                 "half_day_session" : leave.half_day_session,
-            }
-        elif leave.leave_type == "WFH":
-            # WFH full-day only reaches here because is_half_day is False
-            entry = {
-                "user_id"      : emp.id,
-                "full_name"    : emp.full_name,
-                "role"         : emp.role,
-                "availability" : "WFH",
-                "leave_type"   : leave.leave_type,
-                "is_half_day"  : False,
             }
         else:
             entry = {
-                "user_id"      : emp.id,
-                "full_name"    : emp.full_name,
-                "role"         : emp.role,
-                "availability" : "ON_LEAVE",
-                "leave_type"   : leave.leave_type,
-                "is_half_day"  : False,
+                 "user_id" : emp.id,
+                "full_name":emp.full_name,
+                "role" : emp.role,
+                "availability" : "ON_LEAVE",   # BUG FIX 2c: typo "ON_lEAVE" → "ON_LEAVE"
+                "leave_type" : leave.leave_type,
+                "is_half_day" : False,
             }
         employees_payload.append(entry)
 
+    # Compute risk_level using same logic as EP4 dashboard_projects:
+    # anyone with ANY leave record (including WFH, half-day) reduces available count.
+    # EP4 counts all leave records; we count all availability != AVAILABLE to match.
+    assigned_count  = len(member_ids)
+    on_leave_count  = sum(1 for e in employees_payload if e.get("availability") != "AVAILABLE")
+    available_count = assigned_count - on_leave_count
+
     return Response({
             "project" : {
-                "project_id": project.id,
-                "project_name" : project.project_name,
+                "project_id"  : project.id,
+                "project_name": project.project_name,
             },
-            "date":str(target_date),
-            "employees": employees_payload,
+            "date"              : str(target_date),
+            "employees"         : employees_payload,
+            "assigned_employees": assigned_count,
+            "on_leave_count"    : on_leave_count,
+            # risk_level uses project-specific risk_threshold_percent & warning_threshold_percent
+            "risk_level"        : calculate_risk_level(project, assigned_count, available_count),
         })
 
 #ENDPOINT 7 - POST /api/v1/dashboard/day-details
