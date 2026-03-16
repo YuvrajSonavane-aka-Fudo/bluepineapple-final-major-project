@@ -58,7 +58,9 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React dev server
+    "http://localhost:3000", 
+    "https://69b78c3f6810d7e8c3d11a24--leaveimpactdashboard.netlify.app",
+    "https://leaveimpactdashboard.netlify.app" # React dev server
 ]
 
 ROOT_URLCONF = 'core.urls'
