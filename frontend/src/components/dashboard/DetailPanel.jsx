@@ -53,12 +53,6 @@ function StatusIcon({ status }) {
   return null;
 }
 
-function calcRisk(onLeave, assigned) {
-  if (!assigned) return 'LOW';
-  const pct = onLeave / assigned;
-  return pct >= 0.6 ? 'HIGH' : pct >= 0.4 ? 'MEDIUM' : 'LOW';
-}
-
 const RISK_COLOR = { HIGH: '#dc2626', MEDIUM: '#d97706', LOW: '#16a34a' };
 const RISK_BG    = { HIGH: '#fef2f2', MEDIUM: '#fffbeb', LOW: '#f0fdf4' };
 

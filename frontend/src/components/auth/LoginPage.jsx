@@ -146,12 +146,12 @@ const s = {
     width: '100vw',
     height: '100vh',
     overflow: 'hidden',
-    background: '#eef0f4',
+    background: '#eef1f8',
   },
   left: {
     flex: '0 0 52%',
     height: '100vh',
-    background: 'linear-gradient(145deg, #eef0f4 0%, #e4e8ef 100%)',
+    background: 'linear-gradient(145deg, #e8ecf5 0%, #dce3f0 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -198,10 +198,10 @@ const s = {
   chartHeader: { display: 'flex', flexDirection: 'column', gap: 6 },
   chartLine: {
     height: 10, width: 120, borderRadius: 99,
-    background: '#f0b5a3', opacity: 0.8,
+    background: '#7b93cc', opacity: 0.8,
   },
   chartArea: {
-    background: 'linear-gradient(180deg, #fde8df 0%, #fef3ef 100%)',
+    background: 'linear-gradient(180deg, #dce3f5 0%, #eef1fa 100%)',
     borderRadius: 10, padding: '16px 16px 4px',
     height: 120,
   },
@@ -211,7 +211,7 @@ const s = {
   },
   bar: {
     flex: 1, borderRadius: '4px 4px 0 0',
-    background: '#e85d26',
+    background: '#1e2d5a',
     animation: 'fadeIn 400ms ease forwards',
     opacity: 0,
   },
@@ -232,7 +232,7 @@ const s = {
     display: 'flex', flexDirection: 'column', gap: 6,
   },
   chartCardLine: { height: 8, width: '70%', borderRadius: 99, background: '#d4d7dc' },
-  chartCardTag: { height: 8, width: 64, borderRadius: 99, background: '#f0b5a3' },
+  chartCardTag: { height: 8, width: 64, borderRadius: 99, background: '#7b93cc' },
 
   leftTagline: { textAlign: 'center' },
   taglineTitle: {
@@ -250,7 +250,7 @@ const s = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '550px 40px',
-    background: '#eef0f4',
+    background: '#eef1f8',
     marginLeft : "250px" ,
   },
   formCard: {
@@ -291,7 +291,7 @@ const s = {
   },
   submitBtn: {
     padding: '13px',
-    background: '#e85d26',
+    background: '#1e2d5a',
     color: '#ffffff',
     border: 'none',
     borderRadius: 8,
