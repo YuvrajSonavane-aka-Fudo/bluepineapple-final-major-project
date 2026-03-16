@@ -25,10 +25,12 @@ const TIMELINE = [
   { label: 'Public Holiday', type: 'holiday' },
 ];
 
+// Thresholds are per-project (risk_threshold_percent & warning_threshold_percent)
+// so exact numbers can't be shown — labels describe the relative availability level
 const RISK_LEVELS = [
-  { label: 'Low Risk (>75%)', bg: '#86EFAC', border: '#44ff88' },
-  { label: 'Medium Risk (40–75%)', bg: '#FCD34D', border: '#FDBA74' },
-  { label: 'High Risk (<40%)', bg: '#FCA5A5', border: '#FCA5A5' },
+  { label: 'Low Risk',    bg: 'rgba(34,197,94,0.30)',  border: 'rgba(34,197,94,0.5)'  },
+  { label: 'Medium Risk', bg: 'rgba(245,158,11,0.55)', border: 'rgba(245,158,11,0.7)' },
+  { label: 'High Risk',   bg: 'rgba(239,68,68,0.80)',  border: 'rgba(239,68,68,0.9)'  },
 ];
 
 export default function Legend({ showAll, onShowAllChange, hideWeekends, onHideWeekendsChange }) {
@@ -99,8 +101,8 @@ export default function Legend({ showAll, onShowAllChange, hideWeekends, onHideW
           <div key={item.label} style={s.riskRow}>
             <div
               style={{
-                width: 32,
-                height: 18,
+                width: 20,
+                height: 16,
                 borderRadius: 4,
                 background: item.bg,
                 border: `1px solid ${item.border}`,

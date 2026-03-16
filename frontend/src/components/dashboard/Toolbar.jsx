@@ -222,8 +222,9 @@ export default function Toolbar({
               onClick={e => { e.stopPropagation(); setTypeOpen(o => !o); setProjOpen(false); setStatusOpen(false); }}
               style={s.filterBtn}
             >
-              <span style={{ ...s.filterDot, background: '#e85d26' }} />
-              <span style={{ ...s.filterDot, background: '#3b5bdb', marginLeft: -6 }} />
+              <span style={{ ...s.filterDot, background: '#2563EB' }} />
+              <span style={{ ...s.filterDot, background: '#93C5FD', marginLeft: -8,marginBottom:-3}} />
+              <span style={{ ...s.filterDot, background: '#59be68', marginLeft: -18, marginTop:-9 }} />
               {activeLabel(leaveTypes, 'Leave Types')}
               <ChevronIcon />
             </button>
