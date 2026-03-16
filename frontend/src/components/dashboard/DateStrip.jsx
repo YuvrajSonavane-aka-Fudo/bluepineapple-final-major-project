@@ -91,18 +91,6 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
             }}>
               {dayNum}
             </span>
-
-            {/* Holiday dot — only when no leave (avoid overlap) */}
-            {isHoliday && !hasLeave && (
-              <div style={{
-                position: 'absolute',
-                bottom: 3,
-                width: 4,
-                height: 4,
-                borderRadius: '50%',
-                background: '#994545',
-              }} />
-            )}
           </div>
         );
       })}
