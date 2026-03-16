@@ -78,6 +78,7 @@ export default function Dashboard() {
     setStartDate(r.start); setEndDate(r.end);
     setSelectedProjIds([]); setLeaveTypes([]); setLeaveStatuses([]);
     setSearchEmployee(''); setSearchProject(''); setDetailCtx(null);
+    setShowAll(false); setHideWeekends(false);  // reset legend toggles too
   };
 
   // Filter out weekends from date strips when hideWeekends is on
@@ -133,7 +134,7 @@ export default function Dashboard() {
               loading={loadingEmp}
               searchValue={searchEmployee}
               onSearchChange={setSearchEmployee}
-              onCellClick={(emp, date, rect) => setDetailCtx(makeCtx(rect, { type: 'employee', emp, date: new Date(date) }, false))}
+              onCellClick={(emp, date, rect) => setDetailCtx(makeCtx(rect, { type: 'employee', emp, date: new Date(date), leaveStatus: emp.cells?.[date]?.leave_status || null }, false))}
               onDateClick={(date, rect) => {
                 // BUG FIX: don't open Day Overview for weekends — they have no leave data
                 const info = (empData.date_strip || []).find(d => d.date === date);

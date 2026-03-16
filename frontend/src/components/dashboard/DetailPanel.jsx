@@ -21,6 +21,38 @@ const LEAVE_COLORS = {
   'Half Day': '#0891b2',
 };
 
+// Legend-style status icon — matches the swatch icons in the Legend panel exactly
+function StatusIcon({ status }) {
+  if (!status) return null;
+
+  const size = { width: 14, height: 11, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 5, flexShrink: 0 };
+
+  if (status === 'Approved') {
+    return (
+      <span style={{ ...size, background: '#ECFDF5', border: '1px solid #86EFAC' }}>
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      </span>
+    );
+  }
+  if (status === 'Pending') {
+    return (
+      <span style={{ ...size, background: 'transparent', border: '2px dashed #F59E0B' }} />
+    );
+  }
+  if (status === 'Rejected') {
+    return (
+      <span style={{ ...size, background: '#FEF2F2', border: '1px solid #FCA5A5' }}>
+        <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </span>
+    );
+  }
+  return null;
+}
+
 function calcRisk(onLeave, assigned) {
   if (!assigned) return 'LOW';
   const pct = onLeave / assigned;
@@ -199,7 +231,7 @@ export default function DetailPanel({ context, onClose, filters }) {
 
           {!loading && !error && data && (
             <>
-              {type === 'employee' && <EmployeeView data={data} />}
+              {type === 'employee' && <EmployeeView data={data} leaveStatus={context.leaveStatus} />}
               {type === 'project'  && <ProjectView  data={data} />}
               {type === 'day'      && <DayView      data={data} />}
             </>
@@ -213,13 +245,16 @@ export default function DetailPanel({ context, onClose, filters }) {
 }
 
 
-function EmployeeView({ data }) {
+function EmployeeView({ data, leaveStatus }) {
 
   const projects = data?.projects || [];
 
   return (
     <>
-      <Label>IMPACTED PROJECTS ({projects.length})</Label>
+      {/* leave_status comes from EP3 cell data already in memory — no extra API call */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+        <Label>IMPACTED PROJECTS ({projects.length})</Label>
+      </div>
 
       {projects.length === 0
         ? <Empty>No project impact.</Empty>
@@ -232,10 +267,10 @@ function EmployeeView({ data }) {
                 {p.leave_type && (
                   <div style={s.rowSub}>
                     <Dot color={LEAVE_COLORS[p.leave_type] || '#9aa0ad'} />
-                    {p.leave_type}
-                    {p.is_half_day && p.half_day_session
-                      ? ` · ${p.half_day_session}`
-                      : ''}
+                    {p.is_half_day
+                      ? `Partial · ${p.half_day_session || p.leave_type}`
+                      : p.leave_type}
+                    <StatusIcon status={leaveStatus} />
                   </div>
                 )}
               </div>

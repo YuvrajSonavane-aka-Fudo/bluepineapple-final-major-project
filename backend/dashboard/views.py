@@ -406,31 +406,32 @@ def employee_cell_details(request):
                 "project_name": project.project_name,
                 "availability" : "AVAILABLE",
             }
-        elif leave.leave_type == "WFH":
-            entry = {
-                "project_id" : project.id,
-                "project_name": project.project_name,
-                "availability" : "WFH",
-                "leave_type" : leave.leave_type,   # was missing — frontend dot/label needs this
-                "is_half_day" : False,
-            }
-
         elif leave.is_half_day:
+            # is_half_day checked FIRST — WFH half-day hits this branch → PARTIALLY_AVAILABLE
             entry = {
-                "project_id":project.id,
-                "project_name":project.project_name,
-                "availability" : "PARTIALLY_AVAILABLE" if leave.is_half_day else "WFH",
-                "leave_type" : leave.leave_type,
-                "is_half_day" : True,
+                "project_id"       : project.id,
+                "project_name"     : project.project_name,
+                "availability"     : "PARTIALLY_AVAILABLE",
+                "leave_type"       : leave.leave_type,
+                "is_half_day"      : True,
                 "half_day_session" : leave.half_day_session,
+            }
+        elif leave.leave_type == "WFH":
+            # WFH full-day only reaches here because is_half_day is False
+            entry = {
+                "project_id"   : project.id,
+                "project_name" : project.project_name,
+                "availability" : "WFH",
+                "leave_type"   : leave.leave_type,
+                "is_half_day"  : False,
             }
         else:
             entry = {
-                "project_id":project.id,
-                "project_name":project.project_name,
+                "project_id"   : project.id,
+                "project_name" : project.project_name,
                 "availability" : "NOT_AVAILABLE",
-                "leave_type" : leave.leave_type,
-                "is_half_day" : False,
+                "leave_type"   : leave.leave_type,
+                "is_half_day"  : False,
             }
         projects_payload.append(entry)
     
