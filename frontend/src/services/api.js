@@ -1,7 +1,7 @@
 // src/services/api.js
 import axios from 'axios';
 
-const BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api/v1';
+const BASE = process.env.REACT_APP_API_BASE_URL || 'https://bluepineapple-final-major-project.onrender.com/api/v1';
 
 const api = axios.create({ baseURL: BASE });
 
