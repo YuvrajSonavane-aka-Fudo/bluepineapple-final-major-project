@@ -223,7 +223,10 @@ function EmployeeView({ data }) {
                 {p.leave_type && (
                   <div style={s.rowSub}>
                     <Dot color={LEAVE_COLORS[p.leave_type] || '#9aa0ad'} />
-                    {p.leave_type}{p.is_half_day && p.half_day_session ? ` · ${p.half_day_session}` : ''}
+                    {p.leave_type}
+                    {p.is_half_day && p.half_day_session
+                      ? ` · ${p.half_day_session}`
+                      : ''}
                   </div>
                 )}
               </div>
@@ -253,7 +256,9 @@ function ProjectView({ data }) {
   const fullyOut   = withLeave.filter(e => !e?.is_half_day && e?.leave_type !== 'WFH');
   const availCount = emps.length - withLeave.length;
 
-  const risk = calcRisk(withLeave.length, emps.length);
+  // EP6 now returns risk_level using project-specific thresholds
+  // (risk_threshold_percent & warning_threshold_percent). Use it directly.
+  const risk = data?.risk_level || 'LOW';
 
   return (
     <>
@@ -279,12 +284,19 @@ function ProjectView({ data }) {
                 <div style={s.rowName}>{emp.full_name}</div>
 
                 <div style={s.rowSub}>
+                  <span style={{ color: '#b0b6c3' }}>{emp.role}</span>
+
                   {emp.leave_type && (
                     <>
                       <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                      {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
+                      {emp.leave_type}
                     </>
                   )}
+
+                  {emp.is_half_day && emp.half_day_session
+                    ? ` · ${emp.half_day_session}`
+                    : ''}
+
                 </div>
 
               </div>
@@ -301,27 +313,13 @@ function ProjectView({ data }) {
 
 function DayView({ data }) {
 
-  const emps        = data?.employees_on_leave || [];
-  const projects    = (data?.projects || []).filter(p => p.employees_on_leave > 0);
-  const dateMeta    = data?.date || {};
-  const holidayName = dateMeta.is_public_holiday ? dateMeta.holiday_name : null;
+  const emps     = data?.employees_on_leave || [];
+  const projects = (data?.projects || []).filter(
+    p => p.employees_on_leave > 0
+  );
 
   return (
-    <>
-      {/* Show holiday name banner when the clicked date is a public holiday */}
-      {holidayName && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '5px 8px', marginBottom: 6,
-          background: '#fefce8', border: '1px solid #fde68a',
-          borderRadius: 6, fontSize: 11, color: '#92400e', fontWeight: 600,
-        }}>
-          <span style={{ fontSize: 13 }}>🏖️</span>
-          {holidayName}
-          <span style={{ fontWeight: 400, color: '#a16207', marginLeft: 2 }}>· Public Holiday</span>
-        </div>
-      )}
-      <div style={s.dayGrid}>
+    <div style={s.dayGrid}>
 
       <div style={s.dayCol}>
 
@@ -336,7 +334,10 @@ function DayView({ data }) {
                   {emp.leave_type && (
                     <div style={s.rowSub}>
                       <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                      {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
+                      {emp.leave_type}
+                      {emp.is_half_day && emp.half_day_session
+                        ? ` · ${emp.half_day_session}`
+                        : ''}
                     </div>
                   )}
                 </div>
@@ -357,7 +358,8 @@ function DayView({ data }) {
           ? <Empty>None.</Empty>
           : projects.map(p => {
 
-              // use risk_level from backend — calculated with project-specific thresholds
+              // EP7 (day_details) returns risk_level per project — use it directly.
+              // Calculated with project-specific risk_threshold_percent & warning_threshold_percent.
               const risk = p.risk_level || 'LOW';
 
               return (
@@ -376,7 +378,6 @@ function DayView({ data }) {
       </div>
 
     </div>
-    </>
   );
 }
 
