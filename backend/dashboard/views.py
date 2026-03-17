@@ -441,7 +441,29 @@ def employee_cell_details(request):
                 "availability": "AVAILABLE",
                 "spillover":    False,
             }
+        elif leave.leave_type == "WFH" and leave.is_half_day:
+            # WFH half-day — still WFH availability, just partial session
+            entry = {
+                "project_id":       project.id,
+                "project_name":     project.project_name,
+                "availability":     "WFH",
+                "leave_type":       "WFH",
+                "is_half_day":      True,
+                "half_day_session": leave.half_day_session,
+                "spillover":        spillover,
+            }
+        elif leave.leave_type == "WFH":
+            # WFH full-day
+            entry = {
+                "project_id":   project.id,
+                "project_name": project.project_name,
+                "availability": "WFH",
+                "leave_type":   "WFH",
+                "is_half_day":  False,
+                "spillover":    spillover,
+            }
         elif leave.is_half_day:
+            # Non-WFH half-day (Paid, Sick, etc.)
             entry = {
                 "project_id":       project.id,
                 "project_name":     project.project_name,
@@ -451,16 +473,8 @@ def employee_cell_details(request):
                 "half_day_session": leave.half_day_session,
                 "spillover":        spillover,
             }
-        elif leave.leave_type == "WFH":
-            entry = {
-                "project_id":   project.id,
-                "project_name": project.project_name,
-                "availability": "WFH",
-                "leave_type":   leave.leave_type,
-                "is_half_day":  False,
-                "spillover":    spillover,
-            }
         else:
+            # Full-day non-WFH leave
             entry = {
                 "project_id":   project.id,
                 "project_name": project.project_name,
@@ -590,7 +604,31 @@ def project_cell_details(request):
                 "availability": "AVAILABLE",
                 "spillover":    False,
             }
+        elif leave.leave_type == "WFH" and leave.is_half_day:
+            # WFH half-day — still WFH, just partial
+            entry = {
+                "user_id":          emp.id,
+                "full_name":        emp.full_name,
+                "role":             emp.role,
+                "availability":     "WFH",
+                "leave_type":       "WFH",
+                "is_half_day":      True,
+                "half_day_session": leave.half_day_session,
+                "spillover":        spillover,
+            }
+        elif leave.leave_type == "WFH":
+            # WFH full-day
+            entry = {
+                "user_id":      emp.id,
+                "full_name":    emp.full_name,
+                "role":         emp.role,
+                "availability": "WFH",
+                "leave_type":   "WFH",
+                "is_half_day":  False,
+                "spillover":    spillover,
+            }
         elif leave.is_half_day:
+            # Non-WFH half-day
             entry = {
                 "user_id":          emp.id,
                 "full_name":        emp.full_name,
@@ -600,16 +638,6 @@ def project_cell_details(request):
                 "is_half_day":      True,
                 "half_day_session": leave.half_day_session,
                 "spillover":        spillover,
-            }
-        elif leave.leave_type == "WFH":
-            entry = {
-                "user_id":      emp.id,
-                "full_name":    emp.full_name,
-                "role":         emp.role,
-                "availability": "WFH",
-                "leave_type":   leave.leave_type,
-                "is_half_day":  False,
-                "spillover":    spillover,
             }
         else:
             entry = {
@@ -624,7 +652,11 @@ def project_cell_details(request):
         employees_payload.append(entry)
  
     assigned_count  = len(member_ids)
-    on_leave_count  = sum(1 for e in employees_payload if e["availability"] != "AVAILABLE")
+   # WFH employees are still working — only count actual leave and partial leave
+    on_leave_count  = sum(
+        1 for e in employees_payload
+        if e["availability"] not in ("AVAILABLE", "WFH")
+    )
     available_count = assigned_count - on_leave_count
  
     return Response({
