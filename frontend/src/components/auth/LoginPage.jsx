@@ -1,6 +1,8 @@
 // src/components/auth/LoginPage.jsx
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { Box, TextField, Button, Typography, CircularProgress } from '@mui/material';
+import LockIcon from '@mui/icons-material/Lock';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -21,313 +23,193 @@ export default function LoginPage() {
     }
   };
 
+  const fadeUp = (delay = 0) => ({
+    animation: `fadeUp 0.6s ease ${delay}s forwards`,
+    opacity: 0,
+    '@keyframes fadeUp': {
+      from: { opacity: 0, transform: 'translateY(20px)' },
+      to:   { opacity: 1, transform: 'translateY(0)' },
+    },
+  });
+
   return (
-    <div style={s.root}>
-      {/* LEFT PANEL — illustration */}
-      <div style={s.left}>
-        <div style={s.leftInner}>
-          <div style={s.leftBrand}>
-            <div style={s.brandIcon}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="8" height="8" rx="2" fill="white"/>
-                <rect x="13" y="3" width="8" height="8" rx="2" fill="white" opacity="0.6"/>
-                <rect x="3" y="13" width="8" height="8" rx="2" fill="white" opacity="0.6"/>
-                <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.8"/>
+    <Box sx={{
+      display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden',
+      background: '#0d1425', position: 'relative',
+    }}>
+
+      {/* Grid background */}
+      <Box sx={{
+        position: 'absolute', inset: 0, zIndex: 0,
+        backgroundImage: `
+          linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
+        `,
+        backgroundSize: '60px 60px',
+      }} />
+
+      {/* Glow orbs */}
+      <Box sx={{ position: 'absolute', top: '-10%', left: '15%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,91,219,0.15) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }} />
+      <Box sx={{ position: 'absolute', bottom: '-10%', right: '5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,179,237,0.08) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }} />
+
+      {/* ── LEFT PANEL ── */}
+      <Box sx={{ flex: '0 0 48%', height: '100vh', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 8 }}>
+        <Box sx={{ maxWidth: 460, width: '100%', display: 'flex', flexDirection: 'column', gap: 4.5 }}>
+
+          {/* Brand */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ...fadeUp(0) }}>
+            <Box sx={{ width: 40, height: 40, background: 'linear-gradient(135deg, #3b5bdb, #63b3ed)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 24px rgba(59,91,219,0.5)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="3"  y="3"  width="8" height="8" rx="2" fill="white"/>
+                <rect x="13" y="3"  width="8" height="8" rx="2" fill="white" opacity="0.6"/>
+                <rect x="3"  y="13" width="8" height="8" rx="2" fill="white" opacity="0.6"/>
+                <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.85"/>
               </svg>
-            </div>
-            <span style={s.brandName}>Leave Impact Dashboard</span>
-          </div>
+            </Box>
+            <Typography sx={{ fontWeight: 700, fontSize: 15, color: '#e8edf5', letterSpacing: '-0.3px' }}>Leave Impact Dashboard</Typography>
+          </Box>
 
-          {/* Dashboard illustration card */}
-          <div style={s.illustrationWrap}>
-            <div style={s.illustrationCard}>
-              {/* Mock bar chart */}
-              <div style={s.chartHeader}>
-                <div style={s.chartLine} />
-                <div style={{ ...s.chartLine, width: 80 }} />
-              </div>
-              <div style={s.chartArea}>
-                <div style={s.chartBg}>
-                  {[60, 80, 55, 90, 70, 45, 85].map((h, i) => (
-                    <div key={i} style={{ ...s.bar, height: `${h}%`, animationDelay: `${i * 80}ms` }} />
-                  ))}
-                </div>
-              </div>
-              <div style={s.chartFooter}>
-                {['', '', ''].map((_, i) => (
-                  <div key={i} style={s.chartFooterLine} />
-                ))}
-              </div>
-              <div style={s.chartCards}>
-                <div style={s.chartCard}>
-                  <div style={s.chartCardLine} />
-                  <div style={s.chartCardTag} />
-                </div>
-                <div style={s.chartCard}>
-                  <div style={s.chartCardLine} />
-                  <div style={{ ...s.chartCardTag, width: 48 }} />
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Headline */}
+          <Box sx={fadeUp(0.1)}>
+            <Typography sx={{ fontSize: 46, fontWeight: 800, color: '#ffffff', letterSpacing: '-1.5px', lineHeight: 1.08, mb: 2 }}>
+              Know your team's{' '}
+              <Box component="span" sx={{ background: 'linear-gradient(90deg, #63b3ed 0%, #3b5bdb 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                availability.
+              </Box>
+            </Typography>
+            <Typography sx={{ fontSize: 15, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7, maxWidth: 360 }}>
+              Real-time leave impact monitoring and workforce risk forecasting for enterprise teams.
+            </Typography>
+          </Box>
 
-          <div style={s.leftTagline}>
-            <h2 style={s.taglineTitle}>Intelligent Resource Insights</h2>
-            <p style={s.taglineSub}>Real-time monitoring and impact forecasting for enterprise teams.</p>
-          </div>
-        </div>
-      </div>
+          {/* Stat cards */}
+          <Box sx={{ display: 'flex', gap: 1.5, ...fadeUp(0.2) }}>
+            {[
+              { val: 'Real-time', label: 'Leave tracking' },
+              { val: 'Per-project', label: 'Risk analysis' },
+              { val: 'Role-based', label: 'Access control' },
+            ].map(({ val, label }) => (
+              <Box key={label} sx={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', p: '14px 16px' }}>
+                <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#63b3ed', mb: 0.3 }}>{val}</Typography>
+                <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{label}</Typography>
+              </Box>
+            ))}
+          </Box>
 
-      {/* RIGHT PANEL — login form */}
-      <div style={s.right}>
-        <div style={s.formCard} className="slide-up">
-          <h1 style={s.formTitle}>Leave Impact Dashboard</h1>
-          <p style={s.formSub}>Resource Availability &amp; Leave Impact Monitoring</p>
+          {/* Dashboard preview */}
+          <Box sx={fadeUp(0.3)}>
+            <Box sx={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', p: 2.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Box sx={{ width: 80, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }} />
+                <Box sx={{ width: 50, height: 5, borderRadius: 99, background: 'rgba(99,179,237,0.25)' }} />
+                <Box sx={{ ml: 'auto', width: 40, height: 5, borderRadius: 99, background: 'rgba(59,91,219,0.3)' }} />
+              </Box>
+              {[
+                { w: '40%', cells: [1,1,0,1,1,0,0,1,1,0,1], color: 'rgba(59,91,219,0.65)' },
+                { w: '54%', cells: [0,1,1,1,0,0,1,0,1,1,0], color: 'rgba(99,179,237,0.55)' },
+                { w: '35%', cells: [1,0,0,1,1,1,0,1,0,0,1], color: 'rgba(89,190,104,0.55)' },
+                { w: '50%', cells: [0,0,1,0,1,1,1,0,0,1,1], color: 'rgba(59,91,219,0.45)' },
+              ].map((row, ri) => (
+                <Box key={ri} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: ri < 3 ? 1 : 0 }}>
+                  <Box sx={{ width: row.w, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />
+                  <Box sx={{ display: 'flex', gap: '2px', ml: 'auto' }}>
+                    {row.cells.map((filled, ci) => (
+                      <Box key={ci} sx={{ width: 16, height: 22, borderRadius: '3px', background: filled ? row.color : 'rgba(255,255,255,0.04)' }} />
+                    ))}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </Box>
 
-          <form onSubmit={handleSubmit} style={s.form}>
-            <div style={s.field}>
-              <label style={s.label}>Corporate Email</label>
-              <input
+
+      {/* ── RIGHT PANEL ── */}
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 6, zIndex: 1 }}>
+        <Box sx={{ width: '100%', maxWidth: 500, ...fadeUp(0.15) }}>
+
+          {/* Glass card */}
+          <Box sx={{
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '22px',
+            p: '50px 45px',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}>
+            <Typography sx={{ fontSize: 28, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.6px', mb: 0.75 }}>
+              Welcome back
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', mb: 3.5, lineHeight: 1.55 }}>
+              Sign in with your corporate email to continue.
+            </Typography>
+
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Corporate Email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="name@company.com"
                 required
                 autoFocus
-                style={s.input}
+                fullWidth
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px', fontSize: 14,
+                    background: 'rgba(255,255,255,0.06)',
+                    color: '#fff',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.22)' },
+                    '&.Mui-focused fieldset': { borderColor: '#3b5bdb', borderWidth: '1.5px' },
+                  },
+                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.32)', fontSize: 13 },
+                  '& .MuiInputLabel-root.Mui-focused': { color: '#63b3ed' },
+                  '& input': { color: '#fff' },
+                }}
               />
-            </div>
 
-            {error && <p style={s.error}>{error}</p>}
+              {error && (
+                <Box sx={{ p: '10px 12px', background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: '8px', color: '#fca5a5', fontSize: 13 }}>
+                  {error}
+                </Box>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ ...s.submitBtn, opacity: loading ? 0.8 : 1 }}
-            >
-              {loading ? <Spinner /> : 'Sign In'}
-            </button>
-          </form>
+              <Button
+                type="submit"
+                disabled={loading}
+                fullWidth
+                variant="contained"
+                sx={{
+                  mt: 0.5, py: 1.5, borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #3b5bdb 0%, #63b3ed 100%)',
+                  fontSize: 14, fontWeight: 700, textTransform: 'none', letterSpacing: '-0.1px',
+                  boxShadow: '0 4px 20px rgba(59,91,219,0.45)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { background: 'linear-gradient(135deg, #3451c7 0%, #4fa8d5 100%)', boxShadow: '0 8px 28px rgba(59,91,219,0.6)', transform: 'translateY(-1px)' },
+                  '&:active': { transform: 'translateY(0)' },
+                  '&.Mui-disabled': { background: 'rgba(59,91,219,0.3)', color: 'rgba(255,255,255,0.4)', boxShadow: 'none' },
+                }}
+              >
+                {loading ? <CircularProgress size={16} sx={{ color: 'rgba(255,255,255,0.6)' }} /> : 'Sign In →'}
+              </Button>
+            </Box>
 
-          <p style={s.footNote}>
+            <Box sx={{ mt: 3.5, pt: 3, borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75 }}>
+              <LockIcon sx={{ fontSize: 11, color: 'rgba(255,255,255,0.18)' }} />
+              <Typography sx={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                Secure Corporate Access
+              </Typography>
+            </Box>
+          </Box>
+
+          <Typography sx={{ mt: 2, fontSize: 11.5, color: 'rgba(255,255,255,0.18)', textAlign: 'center', lineHeight: 1.6 }}>
             Access permissions are applied automatically based on your role.
-          </p>
-          <p style={s.secureNote}>
-            <LockIcon /> SECURE CORPORATE ACCESS
-          </p>
-        </div>
-      </div>
-    </div>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
   );
 }
-
-function Spinner() {
-  return <span style={{
-    display: 'inline-block', width: 16, height: 16,
-    border: '2px solid rgba(255,255,255,0.4)',
-    borderTopColor: '#fff', borderRadius: '50%',
-    animation: 'spin 0.7s linear infinite',
-  }} />;
-}
-
-function LockIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline', marginRight: 4 }}>
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </svg>
-  );
-}
-
-const s = {
-  root: {
-    display: 'flex',
-    flexDirection: 'row',
-    width: '100vw',
-    height: '100vh',
-    overflow: 'hidden',
-    background: '#eef1f8',
-  },
-  left: {
-    flex: '0 0 52%',
-    height: '100vh',
-    background: 'linear-gradient(145deg, #e8ecf5 0%, #dce3f0 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '48px',
-    position: 'relative',
-  },
-  leftInner: {
-    maxWidth: 480,
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 32,
-  },
-  leftBrand: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  },
-  brandIcon: {
-    width: 36, height: 36,
-    background: '#1e2d5a',
-    borderRadius: 8,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  brandName: {
-    fontWeight: 700, fontSize: 15,
-    color: '#1a1f2e', letterSpacing: '-0.2px',
-  },
-  illustrationWrap: {
-    display: 'flex',
-    justifyContent: 'center',
-  },
-  illustrationCard: {
-    background: '#ffffff',
-    borderRadius: 20,
-    padding: '24px',
-    width: '100%',
-    maxWidth: 420,
-    boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 16,
-  },
-  chartHeader: { display: 'flex', flexDirection: 'column', gap: 6 },
-  chartLine: {
-    height: 10, width: 120, borderRadius: 99,
-    background: '#7b93cc', opacity: 0.8,
-  },
-  chartArea: {
-    background: 'linear-gradient(180deg, #dce3f5 0%, #eef1fa 100%)',
-    borderRadius: 10, padding: '16px 16px 4px',
-    height: 120,
-  },
-  chartBg: {
-    display: 'flex', alignItems: 'flex-end',
-    gap: 6, height: '100%',
-  },
-  bar: {
-    flex: 1, borderRadius: '4px 4px 0 0',
-    background: '#1e2d5a',
-    animation: 'fadeIn 400ms ease forwards',
-    opacity: 0,
-  },
-  chartFooter: {
-    display: 'flex', justifyContent: 'space-between', gap: 8,
-  },
-  chartFooterLine: {
-    flex: 1, height: 8, borderRadius: 99,
-    background: '#e0e3e8',
-  },
-  chartCards: {
-    display: 'flex', gap: 12,
-  },
-  chartCard: {
-    flex: 1,
-    background: '#f8f9fb',
-    borderRadius: 8, padding: '10px 12px',
-    display: 'flex', flexDirection: 'column', gap: 6,
-  },
-  chartCardLine: { height: 8, width: '70%', borderRadius: 99, background: '#d4d7dc' },
-  chartCardTag: { height: 8, width: 64, borderRadius: 99, background: '#7b93cc' },
-
-  leftTagline: { textAlign: 'center' },
-  taglineTitle: {
-    fontSize: 20, fontWeight: 700, color: '#1a1f2e',
-    letterSpacing: '-0.4px', marginBottom: 8,
-  },
-  taglineSub: {
-    fontSize: 14, color: '#5a6272', lineHeight: 1.6,
-  },
-
-  right: {
-    flex: 1,
-    height: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '550px 40px',
-    background: '#eef1f8',
-    marginLeft : "250px" ,
-  },
-  formCard: {
-    background: '#ffffff',
-    borderRadius: 20,
-    padding: '44px 40px',
-    width: '100%',
-    maxWidth: 400,
-    boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
-  },
-  formTitle: {
-    fontSize: 24, fontWeight: 800,
-    color: '#1a1f2e', letterSpacing: '-0.5px',
-    marginBottom: 6,
-  },
-  formSub: {
-    fontSize: 13, color: '#5a6272',
-    marginBottom: 28, lineHeight: 1.5,
-  },
-  form: {
-    display: 'flex', flexDirection: 'column', gap: 16,
-  },
-  field: {
-    display: 'flex', flexDirection: 'column', gap: 6,
-  },
-  label: {
-    fontSize: 13, fontWeight: 500, color: '#1a1f2e',
-  },
-  input: {
-    padding: '11px 14px',
-    border: '1.5px solid #e8eaed',
-    borderRadius: 8,
-    fontSize: 14,
-    color: '#1a1f2e',
-    background: '#ffffff',
-    transition: 'border-color 150ms',
-    width: '100%',
-  },
-  submitBtn: {
-    padding: '13px',
-    background: '#1e2d5a',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: 15,
-    fontWeight: 700,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    transition: 'opacity 150ms, transform 100ms',
-    marginTop: 4,
-    letterSpacing: '-0.1px',
-  },
-  error: {
-    padding: '10px 12px',
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    borderRadius: 7,
-    color: '#dc2626',
-    fontSize: 13,
-  },
-  footNote: {
-    marginTop: 20,
-    fontSize: 12,
-    color: '#9aa0ad',
-    textAlign: 'center',
-    lineHeight: 1.6,
-  },
-  secureNote: {
-    marginTop: 10,
-    fontSize: 11,
-    fontWeight: 600,
-    color: '#9aa0ad',
-    textAlign: 'center',
-    letterSpacing: '0.5px',
-    textTransform: 'uppercase',
-  },
-};
