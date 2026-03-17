@@ -45,14 +45,24 @@ export default function Toolbar({
 
   const activeFilter = getActiveFilter();
   const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'MMM dd, yyyy');
-  const toggleArr = (arr, val, setter) => setter(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
-  const activeLabel = (arr, allLabel) => arr.length === 0 ? allLabel : arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
+  const toggleArr = (arr, val, setter, allValues) => {
+    const next = arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
+    // if all selected or none selected, treat as "all" (empty = all)
+    setter(next.length === allValues.length ? [] : next);
+  };
+
+  // empty array = all selected
+  const isAllSelected = (arr, allValues) => arr.length === 0 || arr.length === allValues.length;
+  const activeLabel = (arr, allValues, allLabel, singleSuffix) => {
+    if (isAllSelected(arr, allValues)) return allLabel;
+    return arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
+  };
 
   const QUICK = [
-    { label: 'T', tooltip: 'Today',      fn: () => { const r = getTodayRange(); onRangeChange(r.start, r.end); } },
-    { label: 'W', tooltip: 'This Week',  fn: () => { const r = getWeekRange();  onRangeChange(r.start, r.end); } },
-    { label: 'M', tooltip: 'This Month', fn: () => { const r = getMonthRange(); onRangeChange(r.start, r.end); } },
-    { label: 'Y', tooltip: 'This Year',  fn: () => { const r = getYearRange();  onRangeChange(r.start, r.end); } },
+    { label: 'T', tooltip: 'Today', fn: () => { const r = getTodayRange(); onRangeChange(r.start, r.end); } },
+    { label: 'W', tooltip: 'Week',  fn: () => { const r = getWeekRange();  onRangeChange(r.start, r.end); } },
+    { label: 'M', tooltip: 'Month', fn: () => { const r = getMonthRange(); onRangeChange(r.start, r.end); } },
+    { label: 'Y', tooltip: 'Year',  fn: () => { const r = getYearRange();  onRangeChange(r.start, r.end); } },
   ];
 
   const btnSx = {
@@ -152,7 +162,7 @@ export default function Toolbar({
               <Checkbox checked={selectedProjectIds.length === 0} size="small" sx={{ p: 0, accentColor: '#3b82f6' }} /> All Projects
             </MenuItem>
             {projects.map(p => (
-              <MenuItem key={p.project_id} onClick={e => { e.stopPropagation(); toggleArr(selectedProjectIds, p.project_id, onProjectsChange); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: selectedProjectIds.includes(p.project_id) ? '#f0f7ff' : 'transparent' }}>
+              <MenuItem key={p.project_id} onClick={e => { e.stopPropagation(); toggleArr(selectedProjectIds, p.project_id, onProjectsChange, projects.map(x => x.project_id)); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: selectedProjectIds.includes(p.project_id) ? '#f0f7ff' : 'transparent' }}>
                 <Checkbox checked={selectedProjectIds.includes(p.project_id)} size="small" sx={{ p: 0 }} /> {p.project_name}
               </MenuItem>
             ))}
@@ -161,11 +171,14 @@ export default function Toolbar({
           {/* Status */}
           <Button onClick={e => { setStatusAnchor(e.currentTarget); setProjAnchor(null); setTypeAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
             <FiberManualRecordIcon sx={{ fontSize: 10, color: '#16a34a' }} />
-            {activeLabel(leaveStatuses, 'Status: Approved')}
+            {activeLabel(leaveStatuses, ALL_STATUSES, 'All Statuses')}
           </Button>
           <Menu anchorEl={statusAnchor} open={Boolean(statusAnchor)} onClose={() => setStatusAnchor(null)} {...menuProps}>
+            <MenuItem onClick={e => { e.stopPropagation(); onLeaveStatusesChange([]); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1 }}>
+              <Checkbox checked={isAllSelected(leaveStatuses, ALL_STATUSES)} size="small" sx={{ p: 0 }} /> All Statuses
+            </MenuItem>
             {ALL_STATUSES.map(st => (
-              <MenuItem key={st} onClick={e => { e.stopPropagation(); toggleArr(leaveStatuses, st, onLeaveStatusesChange); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: leaveStatuses.includes(st) ? '#f0f7ff' : 'transparent' }}>
+              <MenuItem key={st} onClick={e => { e.stopPropagation(); toggleArr(leaveStatuses, st, onLeaveStatusesChange, ALL_STATUSES); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: leaveStatuses.includes(st) ? '#f0f7ff' : 'transparent' }}>
                 <Checkbox checked={leaveStatuses.includes(st)} size="small" sx={{ p: 0 }} /> {st}
               </MenuItem>
             ))}
@@ -174,11 +187,14 @@ export default function Toolbar({
           {/* Leave Types */}
           <Button onClick={e => { setTypeAnchor(e.currentTarget); setProjAnchor(null); setStatusAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
             <FiberManualRecordIcon sx={{ fontSize: 10, color: '#2563EB' }} />
-            {activeLabel(leaveTypes, 'Leave Types')}
+            {activeLabel(leaveTypes, ALL_TYPES, 'All Leave Types')}
           </Button>
           <Menu anchorEl={typeAnchor} open={Boolean(typeAnchor)} onClose={() => setTypeAnchor(null)} {...menuProps}>
+            <MenuItem onClick={e => { e.stopPropagation(); onLeaveTypesChange([]); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1 }}>
+              <Checkbox checked={isAllSelected(leaveTypes, ALL_TYPES)} size="small" sx={{ p: 0 }} /> All Leave Types
+            </MenuItem>
             {ALL_TYPES.map(lt => (
-              <MenuItem key={lt} onClick={e => { e.stopPropagation(); toggleArr(leaveTypes, lt, onLeaveTypesChange); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: leaveTypes.includes(lt) ? '#f0f7ff' : 'transparent' }}>
+              <MenuItem key={lt} onClick={e => { e.stopPropagation(); toggleArr(leaveTypes, lt, onLeaveTypesChange, ALL_TYPES); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: leaveTypes.includes(lt) ? '#f0f7ff' : 'transparent' }}>
                 <Checkbox checked={leaveTypes.includes(lt)} size="small" sx={{ p: 0 }} /> {lt}
               </MenuItem>
             ))}

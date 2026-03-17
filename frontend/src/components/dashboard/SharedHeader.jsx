@@ -1,0 +1,244 @@
+// src/components/dashboard/SharedHeader.jsx
+import { useRef, useCallback, useEffect } from 'react';
+import { InputBase, Box, Typography } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import DateStrip from './DateStrip';
+
+const FROZEN_W = 300;
+const HEADER_H = 40;
+const THUMB_H  = 3;
+const THUMB_W  = 350;
+
+export default function SharedHeader({
+  dateStrip = [],
+  projectCells = {},
+  employeeCells = {},
+  globalSearch,
+  onGlobalSearchChange,
+  searchMode,
+  onSearchModeChange,
+  onDateClick,
+  scrollRef,
+  empScrollRef,
+  projScrollRef,
+  legendVisible,
+  onToggleLegend,
+}) {
+  const headerRef    = useRef(null);
+  const scrollbarRef = useRef(null);
+  const thumbRef     = useRef(null);
+  const syncing      = useRef(false);
+
+  // Expose headerRef as scrollRef so panels can drive this header
+  useEffect(() => {
+    if (scrollRef) scrollRef.current = headerRef.current;
+  });
+
+  const updateThumb = useCallback((scrollLeft) => {
+    const container = headerRef.current;
+    const thumb     = thumbRef.current;
+    if (!container || !thumb) return;
+    const { scrollWidth, clientWidth } = container;
+    if (scrollWidth <= clientWidth) { thumb.style.display = 'none'; return; }
+    thumb.style.display = 'block';
+    const trackW    = (scrollbarRef.current?.clientWidth || clientWidth) - 8;
+    const maxScroll = scrollWidth - clientWidth;
+    const maxThumbX = trackW - THUMB_W;
+    const thumbX    = maxScroll > 0 ? (scrollLeft / maxScroll) * maxThumbX : 0;
+    thumb.style.transform = `translateX(${thumbX + 4}px)`;
+  }, []);
+
+  const syncAll = useCallback((scrollLeft) => {
+    if (syncing.current) return;
+    syncing.current = true;
+    if (headerRef.current)   headerRef.current.scrollLeft   = scrollLeft;
+    if (empScrollRef?.current)  empScrollRef.current.scrollLeft  = scrollLeft;
+    if (projScrollRef?.current) projScrollRef.current.scrollLeft = scrollLeft;
+    updateThumb(scrollLeft);
+    syncing.current = false;
+  }, [empScrollRef, projScrollRef, updateThumb]);
+
+  // Thumb drag
+  useEffect(() => {
+    const thumb = thumbRef.current;
+    if (!thumb) return;
+    let startX = 0, startScroll = 0;
+    const onMouseMove = (e) => {
+      const container = headerRef.current;
+      if (!container) return;
+      const trackW    = (scrollbarRef.current?.clientWidth || container.clientWidth) - 8;
+      const { scrollWidth, clientWidth } = container;
+      const maxScroll = scrollWidth - clientWidth;
+      const maxThumbX = trackW - THUMB_W;
+      const dx        = e.clientX - startX;
+      const newScroll = Math.max(0, Math.min(maxScroll, startScroll + (dx / maxThumbX) * maxScroll));
+      syncAll(newScroll);
+    };
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      thumb.style.cursor = 'grab';
+    };
+    const onMouseDown = (e) => {
+      e.preventDefault();
+      startX      = e.clientX;
+      startScroll = headerRef.current?.scrollLeft || 0;
+      thumb.style.cursor = 'grabbing';
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    };
+    thumb.addEventListener('mousedown', onMouseDown);
+    return () => thumb.removeEventListener('mousedown', onMouseDown);
+  }, [syncAll]);
+
+  const onTrackClick = useCallback((e) => {
+    if (e.target === thumbRef.current) return;
+    const container = headerRef.current;
+    if (!container) return;
+    const rect      = scrollbarRef.current.getBoundingClientRect();
+    const clickX    = e.clientX - rect.left - 4;
+    const trackW    = rect.width - 8;
+    const { scrollWidth, clientWidth } = container;
+    const maxScroll = scrollWidth - clientWidth;
+    const newScroll = Math.max(0, Math.min(maxScroll, (clickX / trackW) * maxScroll));
+    syncAll(newScroll);
+  }, [syncAll]);
+
+  useEffect(() => {
+    updateThumb(0);
+    const ro = new ResizeObserver(() => updateThumb(headerRef.current?.scrollLeft || 0));
+    if (headerRef.current) ro.observe(headerRef.current);
+    return () => ro.disconnect();
+  }, [updateThumb, dateStrip]);
+
+  // Wheel on the frozen col
+  const frozenRef = useRef(null);
+  useEffect(() => {
+    const el = frozenRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      const current = headerRef.current?.scrollLeft || 0;
+      syncAll(Math.max(0, current + e.deltaX));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [syncAll]);
+
+  return (
+    <Box sx={{
+      display: 'flex', flexShrink: 0, position: 'relative',
+      height: HEADER_H + THUMB_H + 6,
+      borderBottom: '2px solid #c8cdd6',
+      background: '#f8f9fb',
+      zIndex: 20,
+    }}>
+      {/* Legend toggle — absolutely pinned to right edge, no layout impact */}
+      <Box
+        component="button"
+        onClick={onToggleLegend}
+        sx={{
+          position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+          width: 22, height: 22,
+          background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '50%',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#9aa0ad', p: 0, zIndex: 5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          '&:hover': { background: '#f0f2f5', color: '#5a6272' },
+        }}
+        title="Toggle Legend"
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points={legendVisible ? "9,18 15,12 9,6" : "15,18 9,12 15,6"}/>
+        </svg>
+      </Box>
+      {/* Frozen column: ID label + global search + L.C. label */}
+      <Box ref={frozenRef} sx={{
+        width: FROZEN_W, minWidth: FROZEN_W, display: 'flex', alignItems: 'center', gap: 1,
+        px: 1.5, pl: '21px', background: '#f8f9fb', borderRight: '2px solid #c8cdd6',
+        flexShrink: 0, height: '100%', boxSizing: 'border-box',
+      }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0 }}>
+          ID
+        </Typography>
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 0.75, background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '6px', px: 0.75, py: 0.5, mx: 1.5, overflow: 'hidden' }}>
+          {/* Mode pill toggle */}
+          <Box sx={{ display: 'flex', background: '#f0f2f5', borderRadius: '4px', p: '2px', flexShrink: 0, gap: '2px' }}>
+            {['EMP', 'PROJ'].map(mode => (
+              <Box
+                key={mode}
+                component="button"
+                onClick={() => onSearchModeChange(mode)}
+                sx={{
+                  px: '4px', py: '2px', borderRadius: '3px', border: 'none', cursor: 'pointer',
+                  fontSize: 10, fontWeight: 700, letterSpacing: '0.3px',
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  background: searchMode === mode ? '#ffffff' : 'transparent',
+                  color: searchMode === mode ? '#1a1f2e' : '#9aa0ad',
+                  boxShadow: searchMode === mode ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {mode}
+              </Box>
+            ))}
+          </Box>
+          <SearchIcon sx={{ fontSize: 13, color: '#9aa0ad', flexShrink: 0 }} />
+          <InputBase
+            placeholder={searchMode === 'EMP' ? 'Search Employees...' : 'Search Projects...'}
+            value={globalSearch}
+            onChange={e => onGlobalSearchChange(e.target.value)}
+            sx={{ flex: 1, fontSize: 12, color: '#1a1f2e', '& input': { p: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" } }}
+          />
+          {globalSearch && (
+            <Box
+              component="button"
+              onClick={() => onGlobalSearchChange('')}
+              sx={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#9aa0ad', p: 0, flexShrink: 0, '&:hover': { color: '#5a6272' } }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </Box>
+          )}
+        </Box>
+        <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0, ml: 'auto', pr: 1 }}>
+          L.C.
+        </Typography>
+      </Box>
+
+      {/* Scrollable date strip + custom scrollbar thumb */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <Box
+          ref={headerRef}
+          onScroll={e => syncAll(e.currentTarget.scrollLeft)}
+          sx={{
+            flex: 1, overflowX: 'scroll', overflowY: 'hidden',
+            height: HEADER_H, display: 'flex', alignItems: 'flex-start',
+            scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
+          }}
+        >
+          <DateStrip
+            dateStrip={dateStrip}
+            onDateClick={onDateClick}
+            projectCells={projectCells}
+            employeeCells={employeeCells}
+          />
+        </Box>
+        <Box
+          ref={scrollbarRef}
+          onClick={onTrackClick}
+          sx={{ width: '100%', height: THUMB_H, position: 'relative', cursor: 'pointer', background: 'transparent' }}
+        >
+          <Box
+            ref={thumbRef}
+            sx={{
+              position: 'absolute', top: '50%', mt: '-0.5px', left: '1px',
+              width: THUMB_W, height: THUMB_H,
+              background: '#c0c7d4', borderRadius: THUMB_H / 2,
+              cursor: 'grab', willChange: 'transform',
+            }}
+          />
+        </Box>
+      </Box>
+    </Box>
+  );
+}

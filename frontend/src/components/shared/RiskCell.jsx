@@ -1,8 +1,8 @@
 // src/components/shared/RiskCell.jsx
-const RISK_RGB = {
-  HIGH:   { r: 239, g: 68,  b: 68  },
-  MEDIUM: { r: 245, g: 158, b: 11  },
-  LOW:    { r: 34,  g: 197, b: 94  },
+const RISK_COLORS = {
+  HIGH:   'rgba(239,68,68,0.80)',
+  MEDIUM: 'rgba(245,158,11,0.55)',
+  LOW:    'rgba(34,197,94,0.30)',
 };
 
 export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) {
@@ -28,14 +28,7 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   const risk = cell?.risk_level || null;
   const showRiskColor = !isWeekend && !isHoliday && risk !== null && cell?.employees_on_leave > 0;
 
-  let bg = cellBg;
-  if (showRiskColor) {
-    const rgb = RISK_RGB[risk] || RISK_RGB['LOW'];
-    const pct = cell.assigned_employees ? cell.employees_on_leave / cell.assigned_employees : 0;
-    const maxOpacity = risk === 'HIGH' ? 0.90 : risk === 'MEDIUM' ? 0.65 : 0.35;
-    const opacity = Math.min(maxOpacity, 0.15 + pct * 0.75);
-    bg = `rgba(${rgb.r},${rgb.g},${rgb.b},${opacity})`;
-  }
+  const bg = showRiskColor ? (RISK_COLORS[risk] || RISK_COLORS['LOW']) : cellBg;
 
   const handleClick = (e) => { const rect = e.currentTarget.getBoundingClientRect(); onClick(rect); };
 
