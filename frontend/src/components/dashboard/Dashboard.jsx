@@ -10,6 +10,7 @@ import ProjectPanel     from './ProjectPanel';
 import DraggableDivider from './DraggableDivider';
 import DetailPanel      from './DetailPanel';
 import Legend           from './Legend';
+import SharedHeader     from './SharedHeader';
 
 export default function Dashboard() {
   const { logout } = useAuth();
@@ -22,8 +23,8 @@ export default function Dashboard() {
   const [leaveStatuses,   setLeaveStatuses]   = useState([]);
   const [showAll,         setShowAll]         = useState(false);
   const [hideWeekends,    setHideWeekends]    = useState(false);
-  const [searchEmployee,  setSearchEmployee]  = useState('');
-  const [searchProject,   setSearchProject]   = useState('');
+  const [globalSearch,    setGlobalSearch]    = useState('');
+  const [searchMode,      setSearchMode]      = useState('EMP');
   const [empData,         setEmpData]         = useState({ date_strip: [], employees: [] });
   const [projData,        setProjData]        = useState({ date_strip: [], projects: [] });
   const [loadingEmp,      setLoadingEmp]      = useState(false);
@@ -34,15 +35,16 @@ export default function Dashboard() {
   const containerRef = useRef(null);
   const [empHeight, setEmpHeight] = useState(null);
 
+  const empScrollRef    = useRef(null);
+  const projScrollRef   = useRef(null);
+  const headerScrollRef = useRef(null);
+
   const handleResize = useCallback((clientY) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const px = clientY - rect.top;
     setEmpHeight(Math.max(120, Math.min(rect.height - 120, px)));
   }, []);
-
-  const empScrollRef  = useRef(null);
-  const projScrollRef = useRef(null);
 
   useEffect(() => {
     fetchProjects()
@@ -72,12 +74,13 @@ export default function Dashboard() {
     const r = getWeekRange();
     setStartDate(r.start); setEndDate(r.end);
     setSelectedProjIds([]); setLeaveTypes([]); setLeaveStatuses([]);
-    setSearchEmployee(''); setSearchProject(''); setDetailCtx(null);
+    setGlobalSearch(''); setDetailCtx(null);
     setShowAll(false); setHideWeekends(false);
   };
 
-  const filteredEmpDateStrip  = hideWeekends ? (empData.date_strip  || []).filter(d => !d.is_weekend) : (empData.date_strip  || []);
-  const filteredProjDateStrip = hideWeekends ? (projData.date_strip || []).filter(d => !d.is_weekend) : (projData.date_strip || []);
+  const filteredDateStrip = hideWeekends
+    ? (empData.date_strip || []).filter(d => !d.is_weekend)
+    : (empData.date_strip || []);
 
   const projectCellsByDate = {};
   (projData.projects || []).forEach(proj => {
@@ -115,61 +118,67 @@ export default function Dashboard() {
         loading={loadingEmp || loadingProj}
       />
 
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch' }}>
+      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch', position: 'relative' }}>
         <Box ref={containerRef} sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          {/* ── Shared sticky header: frozen label col + single DateStrip ── */}
+          <SharedHeader
+            dateStrip={filteredDateStrip}
+            projectCells={projectCellsByDate}
+            employeeCells={employeeCellsByDate}
+            globalSearch={globalSearch}
+            onGlobalSearchChange={setGlobalSearch}
+            searchMode={searchMode}
+            onSearchModeChange={(mode) => { setSearchMode(mode); setGlobalSearch(''); }}
+            onDateClick={(date, rect) => {
+              const info = filteredDateStrip.find(d => d.date === date);
+              if (info?.is_weekend) return;
+              setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, false));
+            }}
+            scrollRef={headerScrollRef}
+            empScrollRef={empScrollRef}
+            projScrollRef={projScrollRef}
+            legendVisible={legendVisible}
+            onToggleLegend={() => setLegendVisible(v => !v)}
+          />
+
+          {/* ── Employee panel (no header) ── */}
           <Box sx={{ height: empHeight ?? '50%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <EmployeePanel
-              dateStrip={filteredEmpDateStrip}
+              dateStrip={filteredDateStrip}
               employees={empData.employees || []}
               loading={loadingEmp}
-              searchValue={searchEmployee}
-              onSearchChange={setSearchEmployee}
+              globalSearch={globalSearch}
+              searchMode={searchMode}
               onCellClick={(emp, date, rect) => setDetailCtx(makeCtx(rect, { type: 'employee', emp, date: new Date(date), leaveStatus: emp.cells?.[date]?.leave_status || null }, false))}
-              onDateClick={(date, rect) => {
-                const info = (empData.date_strip || []).find(d => d.date === date);
-                if (info?.is_weekend) return;
-                setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, false));
-              }}
               scrollRef={empScrollRef}
-              projectCells={projectCellsByDate}
+              headerScrollRef={headerScrollRef}
+              projScrollRef={projScrollRef}
               showAll={showAll}
             />
           </Box>
+
           <DraggableDivider onResize={handleResize} />
+
+          {/* ── Project panel (no header) ── */}
           <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <ProjectPanel
-              dateStrip={filteredProjDateStrip}
+              dateStrip={filteredDateStrip}
               projects={projData.projects || []}
               loading={loadingProj}
-              searchValue={searchProject}
-              onSearchChange={setSearchProject}
+              globalSearch={globalSearch}
+              searchMode={searchMode}
               onCellClick={(proj, date, rect) => setDetailCtx(makeCtx(rect, { type: 'project', project: proj, date: new Date(date) }, true))}
-              onDateClick={(date, rect) => {
-                const info = (projData.date_strip || []).find(d => d.date === date);
-                if (info?.is_weekend) return;
-                setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, true));
-              }}
               scrollRef={projScrollRef}
-              employeeCells={employeeCellsByDate}
+              headerScrollRef={headerScrollRef}
+              empScrollRef={empScrollRef}
             />
           </Box>
         </Box>
 
-        {/* Legend */}
-        <Box sx={{ position: 'relative', display: 'flex' }}>
-          <Box className="legend-scroll" sx={{ width: legendVisible ? 220 : 0, height: '100%', transition: 'width 0.3s ease', overflowX: 'hidden', overflowY: legendVisible ? 'auto' : 'hidden' }}>
-            <Legend showAll={showAll} onShowAllChange={setShowAll} hideWeekends={hideWeekends} onHideWeekendsChange={setHideWeekends} />
-          </Box>
-          <Box
-            component="button"
-            onClick={() => setLegendVisible(!legendVisible)}
-            sx={{ position: 'absolute', left: -30, top: 10, background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '4px', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9aa0ad', zIndex: 10 }}
-            title="Toggle Legend"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points={legendVisible ? "9,18 15,12 9,6" : "15,18 9,12 15,6"}/>
-            </svg>
-          </Box>
+        {/* Legend panel */}
+        <Box sx={{ width: legendVisible ? 220 : 0, flexShrink: 0, height: '100%', transition: 'width 0.3s ease', overflowX: 'hidden', overflowY: legendVisible ? 'auto' : 'hidden', borderLeft: '1px solid #e8eaed' }}>
+          <Legend showAll={showAll} onShowAllChange={setShowAll} hideWeekends={hideWeekends} onHideWeekendsChange={setHideWeekends} />
         </Box>
       </Box>
 
