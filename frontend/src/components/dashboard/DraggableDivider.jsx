@@ -1,43 +1,38 @@
 // src/components/dashboard/DraggableDivider.jsx
-import { useRef, useCallback } from 'react';
+import { useRef } from 'react';
+import { Box } from '@mui/material';
 
 export default function DraggableDivider({ onResize }) {
   const dragging = useRef(false);
 
-  const onMouseDown = useCallback((e) => {
+  const onMouseDown = (e) => {
     dragging.current = true;
     e.preventDefault();
-    document.body.style.cursor = 'row-resize';
-    document.body.style.userSelect = 'none';
-
-    const onMove = (ev) => { if (dragging.current) onResize(ev.clientY); };
-    const onUp   = () => {
+    const onMouseMove = (e) => { if (dragging.current) onResize(e.clientY); };
+    const onMouseUp   = () => {
       dragging.current = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  }, [onResize]);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   return (
-    <div
+    <Box
       onMouseDown={onMouseDown}
-      style={{
-        height: 6, flexShrink: 0,
-        background: '#f0f2f5',
-        borderTop: '1px solid #e8eaed',
-        borderBottom: '1px solid #e8eaed',
-        cursor: 'row-resize',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      sx={{
+        height: '6px', flexShrink: 0, cursor: 'row-resize',
+        background: '#e8eaed', position: 'relative',
+        '&:hover': { background: '#c8cdd6' },
+        '&::after': {
+          content: '""', position: 'absolute',
+          left: '50%', top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 32, height: 2, borderRadius: 1,
+          background: '#9aa0ad',
+        },
       }}
-    >
-      <div style={{
-        width: 40, height: 3, borderRadius: 99,
-        background: '#d4d7dc',
-      }} />
-    </div>
+    />
   );
 }

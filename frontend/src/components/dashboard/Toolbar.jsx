@@ -3,8 +3,18 @@ import { useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { fmt, getWeekRange, getMonthRange, getTodayRange, getYearRange, shiftRange } from '../../utils/dateUtils';
 import { useAuth } from '../../hooks/useAuth';
+import {
+  Box, Typography, Button, IconButton, Menu, MenuItem,
+  Checkbox, Tooltip, Dialog, DialogContent, DialogActions,
+} from '@mui/material';
 import FilterAltOffOutlinedIcon from '@mui/icons-material/FilterAltOffOutlined';
 import CachedOutlinedIcon from '@mui/icons-material/CachedOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import LogoutIcon from '@mui/icons-material/Logout';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 
 export default function Toolbar({
   startDate, endDate, onRangeChange,
@@ -13,12 +23,11 @@ export default function Toolbar({
   leaveTypes, onLeaveTypesChange,
   onRefresh, onClear, loading,
 }) {
-  const { session, logout } = useAuth();
-  const [projOpen,   setProjOpen]   = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [typeOpen,   setTypeOpen]   = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-
+  const { logout } = useAuth();
+  const [projAnchor,   setProjAnchor]   = useState(null);
+  const [statusAnchor, setStatusAnchor] = useState(null);
+  const [typeAnchor,   setTypeAnchor]   = useState(null);
+  const [showLogout,   setShowLogout]   = useState(false);
   const startInputRef = useRef(null);
   const endInputRef   = useRef(null);
 
@@ -26,389 +35,192 @@ export default function Toolbar({
   const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
 
   const getActiveFilter = () => {
-    const today = getTodayRange();
-    const week  = getWeekRange();
-    const month = getMonthRange();
-    const year  = getYearRange();
     const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
-    if (isSameDay(startDate, today.start) && isSameDay(endDate, today.end)) return 'T';
-    if (isSameDay(startDate, week.start)  && isSameDay(endDate, week.end))  return 'W';
-    if (isSameDay(startDate, month.start) && isSameDay(endDate, month.end)) return 'M';
-    if (isSameDay(startDate, year.start)  && isSameDay(endDate, year.end))  return 'Y';
+    if (isSameDay(startDate, getTodayRange().start) && isSameDay(endDate, getTodayRange().end)) return 'T';
+    if (isSameDay(startDate, getWeekRange().start)  && isSameDay(endDate, getWeekRange().end))  return 'W';
+    if (isSameDay(startDate, getMonthRange().start) && isSameDay(endDate, getMonthRange().end)) return 'M';
+    if (isSameDay(startDate, getYearRange().start)  && isSameDay(endDate, getYearRange().end))  return 'Y';
     return null;
   };
 
   const activeFilter = getActiveFilter();
-
   const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'MMM dd, yyyy');
+  const toggleArr = (arr, val, setter) => setter(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
+  const activeLabel = (arr, allLabel) => arr.length === 0 ? allLabel : arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
 
-  const toggleArr = (arr, val, setter) =>
-    setter(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
-
-  const activeLabel = (arr, allLabel) =>
-    arr.length === 0 ? allLabel : arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
-
-  const QUICK_FILTERS = [
+  const QUICK = [
     { label: 'T', tooltip: 'Today',      fn: () => { const r = getTodayRange(); onRangeChange(r.start, r.end); } },
     { label: 'W', tooltip: 'This Week',  fn: () => { const r = getWeekRange();  onRangeChange(r.start, r.end); } },
     { label: 'M', tooltip: 'This Month', fn: () => { const r = getMonthRange(); onRangeChange(r.start, r.end); } },
     { label: 'Y', tooltip: 'This Year',  fn: () => { const r = getYearRange();  onRangeChange(r.start, r.end); } },
   ];
 
+  const btnSx = {
+    display: 'flex', alignItems: 'center', gap: '6px',
+    px: 1.25, py: 0.75,
+    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: '7px', color: '#fff', fontSize: 12, textTransform: 'none',
+    fontFamily: "'Plus Jakarta Sans', sans-serif", whiteSpace: 'nowrap', minWidth: 0,
+    '&:hover': { background: 'rgba(255,255,255,0.18)' },
+  };
+
+  const iconBtnSx = {
+    width: 32, height: 32,
+    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: '7px', color: 'rgba(255,255,255,0.8)',
+    '&:hover': { background: 'rgba(255,255,255,0.18)' },
+  };
+
+  const menuProps = {
+    PaperProps: {
+      sx: { borderRadius: '10px', border: '1px solid #e8eaed', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', mt: 0.75, minWidth: 180 }
+    },
+    MenuListProps: { sx: { p: 0.75 } },
+  };
+
   return (
     <>
-      <div style={s.root}>
-        {/* LEFT: Logo + title */}
-        <div style={s.left}>
-          <div style={s.logo}>
+      <Box sx={{ height: 52, background: '#1e2d5a', display: 'flex', alignItems: 'center', px: 2, gap: 1.5, flexShrink: 0, position: 'relative', zIndex: 10 }}>
+        {/* Logo */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexShrink: 0 }}>
+          <Box sx={{ width: 32, height: 32, background: 'rgba(255,255,255,0.15)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <rect x="3"  y="3"  width="8" height="8" rx="2" fill="white"/>
               <rect x="13" y="3"  width="8" height="8" rx="2" fill="white" opacity="0.5"/>
               <rect x="3"  y="13" width="8" height="8" rx="2" fill="white" opacity="0.5"/>
               <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.8"/>
             </svg>
-          </div>
-          <span style={s.title}>Leave Impact Dashboard</span>
-        </div>
+          </Box>
+          <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 14, letterSpacing: '-0.2px' }}>Leave Impact Dashboard</Typography>
+        </Box>
 
-        {/* CENTER: Date navigation */}
-        <div style={s.center}>
-          <span style={s.filterLabel}>
-            <FilterIcon /> Filters:
-          </span>
+        {/* Center */}
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center' }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline' }}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filters:
+          </Typography>
 
-          <button
-            onClick={() => { const r = shiftRange(startDate, endDate, 'back'); onRangeChange(r.start, r.end); }}
-            style={s.arrowBtn}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-          </button>
+          <IconButton onClick={() => { const r = shiftRange(startDate, endDate, 'back'); onRangeChange(r.start, r.end); }} sx={{ ...iconBtnSx, width: 26, height: 26 }}>
+            <ChevronLeftIcon sx={{ fontSize: 14 }} />
+          </IconButton>
 
           {/* Date range */}
-          <div style={s.dateRange}>
-            {/* Start date */}
-            <div style={s.datePickerWrap}>
-              <span style={s.dateDisplay}>{fmtDisplay(startDate)}</span>
-              <button
-                style={s.calBtn}
-                onClick={() => startInputRef.current?.showPicker?.() || startInputRef.current?.click()}
-                title="Pick start date"
-              >
-                <CalendarIcon />
-              </button>
-              <input
-                ref={startInputRef}
-                type="date"
-                value={fmt(startDate)}
-                onChange={e => {
-                  const newStart = new Date(e.target.value);
-                  if (!isNaN(newStart) && newStart <= endDate) onRangeChange(newStart, endDate);
-                }}
-                style={s.hiddenInput}
-              />
-            </div>
-
-            <span style={s.dateDash}>—</span>
-
-            {/* End date */}
-            <div style={s.datePickerWrap}>
-              <span style={s.dateDisplay}>{fmtDisplay(endDate)}</span>
-              <button
-                style={s.calBtn}
-                onClick={() => endInputRef.current?.showPicker?.() || endInputRef.current?.click()}
-                title="Pick end date"
-              >
-                <CalendarIcon />
-              </button>
-              <input
-                ref={endInputRef}
-                type="date"
-                value={fmt(endDate)}
-                onChange={e => {
-                  const newEnd = new Date(e.target.value);
-                  if (!isNaN(newEnd) && newEnd >= startDate) onRangeChange(startDate, newEnd);
-                }}
-                style={s.hiddenInput}
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={() => { const r = shiftRange(startDate, endDate, 'forward'); onRangeChange(r.start, r.end); }}
-            style={s.arrowBtn}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </button>
-
-          {/* Quick filter tabs */}
-          <div style={s.tabs}>
-            {QUICK_FILTERS.map(({ label, tooltip, fn }) => (
-              <div key={label} style={{ position: 'relative' }}>
-                <button
-                  onClick={fn}
-                  style={{ ...s.tab, ...(activeFilter === label && s.tabActive) }}
-                  onMouseEnter={e => { const t = e.currentTarget.nextSibling; if (t) t.style.opacity = '1'; }}
-                  onMouseLeave={e => { const t = e.currentTarget.nextSibling; if (t) t.style.opacity = '0'; }}
-                >
-                  {label}
-                </button>
-                <div style={s.tooltip}>{tooltip}</div>
-              </div>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '7px', px: 1, py: 0.4 }}>
+            {[
+              { ref: startInputRef, val: fmt(startDate), display: fmtDisplay(startDate), onChange: (v) => { const d = new Date(v); if (!isNaN(d) && d <= endDate) onRangeChange(d, endDate); } },
+              { ref: endInputRef,   val: fmt(endDate),   display: fmtDisplay(endDate),   onChange: (v) => { const d = new Date(v); if (!isNaN(d) && d >= startDate) onRangeChange(startDate, d); } },
+            ].map((item, i) => (
+              <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {i > 0 && <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, pb: '2px' }}>—</Typography>}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography sx={{ color: '#fff', fontSize: 12, fontFamily: "'DM Mono', monospace", whiteSpace: 'nowrap' }}>{item.display}</Typography>
+                  <IconButton size="small" sx={{ p: 0, color: 'rgba(255,255,255,0.7)' }} onClick={() => item.ref.current?.showPicker?.() || item.ref.current?.click()}>
+                    <CalendarTodayIcon sx={{ fontSize: 13 }} />
+                  </IconButton>
+                  <input ref={item.ref} type="date" value={item.val} onChange={e => item.onChange(e.target.value)} style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
+                </Box>
+              </Box>
             ))}
-          </div>
+          </Box>
 
-          <div style={s.sep} />
+          <IconButton onClick={() => { const r = shiftRange(startDate, endDate, 'forward'); onRangeChange(r.start, r.end); }} sx={{ ...iconBtnSx, width: 26, height: 26 }}>
+            <ChevronRightIcon sx={{ fontSize: 14 }} />
+          </IconButton>
 
-          {/* Projects dropdown */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={e => { e.stopPropagation(); setProjOpen(o => !o); setStatusOpen(false); setTypeOpen(false); }}
-              style={s.filterBtn}
-            >
-              <span style={{ ...s.filterDot, width: 15, height: 15, paddingLeft: '4px' }}>P</span>
-              {selectedProjectIds.length === 0 ? `All Projects (${projects.length})` : `${selectedProjectIds.length} Projects`}
-              <ChevronIcon />
-            </button>
-            {projOpen && (
-              <Dropdown onClose={() => setProjOpen(false)} scrollable maxWidth={320}>
-                <DropdownItem
-                  label="All Projects"
-                  checked={selectedProjectIds.length === 0}
-                  onClick={e => { e.stopPropagation(); onProjectsChange([]); }}
-                />
-                {projects.map(p => (
-                  <DropdownItem
-                    key={p.project_id}
-                    label={p.project_name}
-                    checked={selectedProjectIds.includes(p.project_id)}
-                    onClick={e => { e.stopPropagation(); toggleArr(selectedProjectIds, p.project_id, onProjectsChange); }}
-                  />
-                ))}
-              </Dropdown>
-            )}
-          </div>
+          {/* Quick filters */}
+          <Box sx={{ display: 'flex', gap: '2px', background: 'rgba(255,255,255,0.1)', borderRadius: '7px', p: '2px' }}>
+            {QUICK.map(({ label, tooltip, fn }) => (
+              <Tooltip key={label} title={tooltip} placement="bottom">
+                <Button onClick={fn} sx={{ minWidth: 0, px: 1.25, py: 0.5, borderRadius: '5px', fontSize: 11, fontWeight: 700, color: activeFilter === label ? '#fff' : 'rgba(255,255,255,0.7)', background: activeFilter === label ? 'rgba(255,255,255,0.25)' : 'transparent', '&:hover': { background: 'rgba(255,255,255,0.15)' } }}>
+                  {label}
+                </Button>
+              </Tooltip>
+            ))}
+          </Box>
 
-          {/* Status dropdown */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={e => { e.stopPropagation(); setStatusOpen(o => !o); setProjOpen(false); setTypeOpen(false); }}
-              style={s.filterBtn}
-            >
-              <span style={{ ...s.filterDot, background: '#16a34a' }} />
-              {activeLabel(leaveStatuses, 'Status: Approved')}
-              <ChevronIcon />
-            </button>
-            {statusOpen && (
-              <Dropdown onClose={() => setStatusOpen(false)}>
-                {ALL_STATUSES.map(st => (
-                  <DropdownItem
-                    key={st}
-                    label={st}
-                    checked={leaveStatuses.includes(st)}
-                    onClick={e => { e.stopPropagation(); toggleArr(leaveStatuses, st, onLeaveStatusesChange); }}
-                  />
-                ))}
-              </Dropdown>
-            )}
-          </div>
+          <Box sx={{ height: 20, background: 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
 
-          {/* Leave Types dropdown */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={e => { e.stopPropagation(); setTypeOpen(o => !o); setProjOpen(false); setStatusOpen(false); }}
-              style={s.filterBtn}
-            >
-              <span style={{ ...s.filterDot, background: '#2563EB' }} />
-              <span style={{ ...s.filterDot, background: '#93C5FD', marginLeft: -8,marginBottom:-3}} />
-              <span style={{ ...s.filterDot, background: '#59be68', marginLeft: -18, marginTop:-9 }} />
-              {activeLabel(leaveTypes, 'Leave Types')}
-              <ChevronIcon />
-            </button>
-            {typeOpen && (
-              <Dropdown onClose={() => setTypeOpen(false)}>
-                {ALL_TYPES.map(lt => (
-                  <DropdownItem
-                    key={lt}
-                    label={lt}
-                    checked={leaveTypes.includes(lt)}
-                    onClick={e => { e.stopPropagation(); toggleArr(leaveTypes, lt, onLeaveTypesChange); }}
-                  />
-                ))}
-              </Dropdown>
-            )}
-          </div>
-        </div>
+          {/* Projects */}
+          <Button onClick={e => { setProjAnchor(e.currentTarget); setStatusAnchor(null); setTypeAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
+            <Box component="span" sx={{ display: 'inline-flex', width: 15, height: 15, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>P</Box>
+            {selectedProjectIds.length === 0 ? `All Projects (${projects.length})` : `${selectedProjectIds.length} Projects`}
+          </Button>
+          <Menu anchorEl={projAnchor} open={Boolean(projAnchor)} onClose={() => setProjAnchor(null)} {...menuProps}
+            PaperProps={{ ...menuProps.PaperProps, sx: { ...menuProps.PaperProps.sx, maxHeight: 260, overflowY: 'auto', maxWidth: 320 } }}>
+            <MenuItem onClick={e => { e.stopPropagation(); onProjectsChange([]); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1 }}>
+              <Checkbox checked={selectedProjectIds.length === 0} size="small" sx={{ p: 0, accentColor: '#3b82f6' }} /> All Projects
+            </MenuItem>
+            {projects.map(p => (
+              <MenuItem key={p.project_id} onClick={e => { e.stopPropagation(); toggleArr(selectedProjectIds, p.project_id, onProjectsChange); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: selectedProjectIds.includes(p.project_id) ? '#f0f7ff' : 'transparent' }}>
+                <Checkbox checked={selectedProjectIds.includes(p.project_id)} size="small" sx={{ p: 0 }} /> {p.project_name}
+              </MenuItem>
+            ))}
+          </Menu>
 
-        {/* RIGHT */}
-        <div style={s.right}>
-          <button onClick={onRefresh} style={s.iconBtn} title="Refresh" disabled={loading}>
-            <CachedOutlinedIcon sx={{ fontSize: 18, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          </button>
+          {/* Status */}
+          <Button onClick={e => { setStatusAnchor(e.currentTarget); setProjAnchor(null); setTypeAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
+            <FiberManualRecordIcon sx={{ fontSize: 10, color: '#16a34a' }} />
+            {activeLabel(leaveStatuses, 'Status: Approved')}
+          </Button>
+          <Menu anchorEl={statusAnchor} open={Boolean(statusAnchor)} onClose={() => setStatusAnchor(null)} {...menuProps}>
+            {ALL_STATUSES.map(st => (
+              <MenuItem key={st} onClick={e => { e.stopPropagation(); toggleArr(leaveStatuses, st, onLeaveStatusesChange); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: leaveStatuses.includes(st) ? '#f0f7ff' : 'transparent' }}>
+                <Checkbox checked={leaveStatuses.includes(st)} size="small" sx={{ p: 0 }} /> {st}
+              </MenuItem>
+            ))}
+          </Menu>
 
-          <button onClick={onClear} style={s.iconBtn} title="Clear filters">
-            <FilterAltOffOutlinedIcon sx={{ fontSize: 18 }} />
-          </button>
+          {/* Leave Types */}
+          <Button onClick={e => { setTypeAnchor(e.currentTarget); setProjAnchor(null); setStatusAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
+            <FiberManualRecordIcon sx={{ fontSize: 10, color: '#2563EB' }} />
+            {activeLabel(leaveTypes, 'Leave Types')}
+          </Button>
+          <Menu anchorEl={typeAnchor} open={Boolean(typeAnchor)} onClose={() => setTypeAnchor(null)} {...menuProps}>
+            {ALL_TYPES.map(lt => (
+              <MenuItem key={lt} onClick={e => { e.stopPropagation(); toggleArr(leaveTypes, lt, onLeaveTypesChange); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: leaveTypes.includes(lt) ? '#f0f7ff' : 'transparent' }}>
+                <Checkbox checked={leaveTypes.includes(lt)} size="small" sx={{ p: 0 }} /> {lt}
+              </MenuItem>
+            ))}
+          </Menu>
+        </Box>
 
-          <button onClick={() => setShowLogoutModal(true)} style={s.iconBtn} title="Logout">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5m0 0l-5-5m5 5H9"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+        {/* Right */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+          <Tooltip title="Refresh">
+            <span>
+              <IconButton onClick={onRefresh} disabled={loading} sx={iconBtnSx}>
+                <CachedOutlinedIcon sx={{ fontSize: 18, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Clear filters">
+            <IconButton onClick={onClear} sx={iconBtnSx}>
+              <FilterAltOffOutlinedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Logout">
+            <IconButton onClick={() => setShowLogout(true)} sx={iconBtnSx}>
+              <LogoutIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
 
-      {showLogoutModal && (
-        <LogoutModal
-          onConfirm={() => { setShowLogoutModal(false); logout(); }}
-          onCancel={() => setShowLogoutModal(false)}
-        />
-      )}
+      {/* Logout dialog */}
+      <Dialog open={showLogout} onClose={() => setShowLogout(false)} PaperProps={{ sx: { borderRadius: '16px', p: '8px', width: 300 } }}>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, pt: 3 }}>
+          <Box sx={{ width: 54, height: 54, borderRadius: '50%', background: '#fff5f0', border: '1.5px solid #fcd9c8', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+            <LogoutIcon sx={{ fontSize: 24, color: '#1e2d5a' }} />
+          </Box>
+          <Typography sx={{ fontSize: 18, fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>Sign out?</Typography>
+          <Typography sx={{ fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 1.55, mt: 0.5 }}>You'll need to sign back in to access the dashboard.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ gap: 1.25, px: 3, pb: 3, pt: 1, '& > :not(style) ~ :not(style)': { ml: 0 } }}>
+          <Button onClick={() => setShowLogout(false)} fullWidth variant="outlined" sx={{ borderRadius: '9px', borderColor: '#e5e7eb', color: '#374151', fontSize: 13, fontWeight: 600, textTransform: 'none', py: 1.25, '&:hover': { background: '#f3f4f6', borderColor: '#e5e7eb' } }}>Cancel</Button>
+          <Button onClick={() => { setShowLogout(false); logout(); }} fullWidth variant="contained" sx={{ borderRadius: '9px', background: '#1e2d5a', fontSize: 13, fontWeight: 600, textTransform: 'none', py: 1.25, '&:hover': { background: '#162347' } }}>Yes, sign out</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function LogoutModal({ onConfirm, onCancel }) {
-  return (
-    <div style={m.overlay} onClick={onCancel}>
-      <div style={m.box} onClick={e => e.stopPropagation()}>
-        <div style={m.iconWrap}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e85d26" strokeWidth="2.2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5m0 0l-5-5m5 5H9"/>
-          </svg>
-        </div>
-        <p style={m.title}>Sign out?</p>
-        <p style={m.sub}>You'll need to sign back in to access the dashboard.</p>
-        <div style={m.actions}>
-          <button onClick={onCancel} style={m.cancelBtn}
-            onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
-            onMouseLeave={e => e.currentTarget.style.background = '#fff'}>Cancel</button>
-          <button onClick={onConfirm} style={m.confirmBtn}
-            onMouseEnter={e => e.currentTarget.style.background = '#162347'}
-            onMouseLeave={e => e.currentTarget.style.background = '#1e2d5a'}>Yes, sign out</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Dropdown({ children, onClose, scrollable = false, maxWidth = 280 }) {
-  return (
-    <>
-      <div
-        onClick={e => { e.stopPropagation(); onClose(); }}
-        style={{ position: 'fixed', inset: 0, zIndex: 98 }}
-      />
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'absolute', top: '100%', left: 0, marginTop: 6,
-          background: '#fff', border: '1px solid #e8eaed',
-          borderRadius: 10, padding: 6,
-          minWidth: 180, maxWidth, width: 'max-content',
-          ...(scrollable && {
-            maxHeight: 260, overflowY: 'auto', overflowX: 'hidden',
-            scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent',
-          }),
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 99,
-        }}
-      >
-        {children}
-      </div>
-    </>
-  );
-}
-
-function DropdownItem({ label, checked, onClick }) {
-  return (
-    <label
-      onMouseDown={e => { e.preventDefault(); e.stopPropagation(); onClick(e); }}
-      style={{
-        display: 'flex', alignItems: 'flex-start', gap: 8,
-        padding: '8px 10px', borderRadius: 6,
-        cursor: 'pointer', fontSize: 13, color: '#1a1f2e',
-        background: checked ? '#f0f7ff' : 'transparent',
-        wordBreak: 'break-word',
-        userSelect: 'none',
-      }}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={() => {}}
-        style={{ accentColor: '#3b82f6', width: 14, height: 14, flexShrink: 0, marginTop: 1 }}
-      />
-      {label}
-    </label>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-      <line x1="16" y1="2" x2="16" y2="6"/>
-      <line x1="8"  y1="2" x2="8"  y2="6"/>
-      <line x1="3"  y1="10" x2="21" y2="10"/>
-    </svg>
-  );
-}
-
-function FilterIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline' }}>
-      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <polyline points="6 9 12 15 18 9"/>
-    </svg>
-  );
-}
-
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const m = {
-  overlay:    { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  box:        { background: '#fff', borderRadius: 16, padding: '32px 28px 24px', width: 300, boxShadow: '0 24px 64px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
-  iconWrap:   { width: 54, height: 54, borderRadius: '50%', background: '#fff5f0', border: '1.5px solid #fcd9c8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  title:      { margin: 0, fontSize: 18, fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' },
-  sub:        { margin: '4px 0 18px', fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 1.55 },
-  actions:    { display: 'flex', gap: 10, width: '100%' },
-  cancelBtn:  { flex: 1, padding: '10px 0', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background 150ms' },
-  confirmBtn: { flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', background: '#1e2d5a', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background 150ms' },
-};
-
-const s = {
-  root:          { height: 52, background: '#1e2d5a', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, flexShrink: 0, position: 'relative', zIndex: 10 },
-  left:          { display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 },
-  logo:          { width: 32, height: 32, background: 'rgba(255,255,255,0.15)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  title:         { color: '#ffffff', fontWeight: 700, fontSize: 14, letterSpacing: '-0.2px' },
-  center:        { flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' },
-  filterLabel:   { color: 'rgba(255,255,255,0.7)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 },
-  arrowBtn:      { width: 26, height: 26, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 5, color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 },
-  dateRange:     { display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 7, padding: '3px 8px' },
-  datePickerWrap:{ display: 'flex', alignItems: 'center', gap: 4 },
-  dateDisplay:   { color: '#fff', fontSize: 12, fontFamily: "'DM Mono', monospace", whiteSpace: 'nowrap' },
-  calBtn:        { display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0, lineHeight: 1 },
-  hiddenInput:   { position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' },
-  dateDash:      { color: 'rgba(255,255,255,0.5)', fontSize: 12, paddingBottom: 2 },
-  tabs:          { display: 'flex', gap: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 7, padding: '2px' },
-  tab:           { padding: '4px 10px', borderRadius: 5, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)', cursor: 'pointer', letterSpacing: '0.3px', transition: 'background 120ms, color 120ms', background: 'transparent', border: 'none' },
-  tabActive:     { background: 'rgba(255,255,255,0.25)', color: '#ffffff' },
-  tooltip:       { position: 'absolute', top: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)', background: 'rgba(15,23,42,0.92)', color: '#fff', fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 5, whiteSpace: 'nowrap', pointerEvents: 'none', opacity: 0, transition: 'opacity 150ms', zIndex: 200 },
-  sep:           { width: 1, height: 20, background: 'rgba(255,255,255,0.2)', flexShrink: 0 },
-  filterBtn:     { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 7, color: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', sans-serif", whiteSpace: 'nowrap' },
-  filterDot:     { display: 'inline-flex', width: 10, height: 10, borderRadius: '50%', background: '#3b82f6', flexShrink: 0 },
-  right:         { display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 },
-  iconBtn:       { width: 32, height: 32, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 7, color: 'rgba(255,255,255,0.8)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-};

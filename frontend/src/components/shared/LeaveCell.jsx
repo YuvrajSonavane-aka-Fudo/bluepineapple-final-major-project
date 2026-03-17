@@ -1,4 +1,5 @@
 // src/components/shared/LeaveCell.jsx
+// Pure inline styles — MUI cannot replicate clip-path triangle shapes pixel-perfectly
 export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
   const isWeekend = dateInfo?.is_weekend;
   const isHoliday = dateInfo?.is_public_holiday;
@@ -15,19 +16,10 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
   if (isHoliday && !isWeekend) cellBg = '#fefce8';
 
   const nb = '1px solid #e8eaed';
-
-  const LEAVE_COLOR = {
-    'Paid':   '#2563EB',
-    'Unpaid': '#93C5FD',
-    'WFH':    '#59be68',
-  };
+  const LEAVE_COLOR = { 'Paid': '#2563EB', 'Unpaid': '#93C5FD', 'WFH': '#59be68' };
   const baseColor = LEAVE_COLOR[leaveType] ?? '#2563EB';
 
-  // Capture rect synchronously, pass plain rect object up
-  const handleClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    onClick(rect);
-  };
+  const handleClick = (e) => { const rect = e.currentTarget.getBoundingClientRect(); onClick(rect); };
 
   return (
     <div
@@ -38,12 +30,9 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
         cursor: hasLeave ? 'pointer' : 'default',
         flexShrink: 0, position: 'relative',
         background: cellBg,
-        borderTop: 'none',
-        borderLeft: isFirst ? nb : 'none',
-        borderRight: nb,
-        borderBottom: nb,
-        boxSizing: 'border-box',
-        padding: 0,
+        borderTop: 'none', borderLeft: isFirst ? nb : 'none',
+        borderRight: nb, borderBottom: nb,
+        boxSizing: 'border-box', padding: 0,
         zIndex: hasLeave ? 2 : 'auto',
       }}
     >

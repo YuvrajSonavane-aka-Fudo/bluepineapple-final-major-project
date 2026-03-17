@@ -1,5 +1,6 @@
 // src/components/dashboard/Dashboard.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Box } from '@mui/material';
 import { fmt, getWeekRange } from '../../utils/dateUtils';
 import { fetchProjects, fetchEmployeeDashboard, fetchProjectDashboard } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,7 +23,7 @@ export default function Dashboard() {
   const [showAll,         setShowAll]         = useState(false);
   const [hideWeekends,    setHideWeekends]    = useState(false);
   const [searchEmployee,  setSearchEmployee]  = useState('');
-  const [searchProject,   setSearchProject]  = useState('');
+  const [searchProject,   setSearchProject]   = useState('');
   const [empData,         setEmpData]         = useState({ date_strip: [], employees: [] });
   const [projData,        setProjData]        = useState({ date_strip: [], projects: [] });
   const [loadingEmp,      setLoadingEmp]      = useState(false);
@@ -60,15 +61,9 @@ export default function Dashboard() {
   const fetchAll = useCallback(() => {
     const body = buildBody();
     setLoadingEmp(true);
-    fetchEmployeeDashboard(body)
-      .then(setEmpData)
-      .catch(err => { if (err?.response?.status === 401) logout(); })
-      .finally(() => setLoadingEmp(false));
+    fetchEmployeeDashboard(body).then(setEmpData).catch(err => { if (err?.response?.status === 401) logout(); }).finally(() => setLoadingEmp(false));
     setLoadingProj(true);
-    fetchProjectDashboard(body)
-      .then(setProjData)
-      .catch(err => { if (err?.response?.status === 401) logout(); })
-      .finally(() => setLoadingProj(false));
+    fetchProjectDashboard(body).then(setProjData).catch(err => { if (err?.response?.status === 401) logout(); }).finally(() => setLoadingProj(false));
   }, [buildBody, logout]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
@@ -78,16 +73,11 @@ export default function Dashboard() {
     setStartDate(r.start); setEndDate(r.end);
     setSelectedProjIds([]); setLeaveTypes([]); setLeaveStatuses([]);
     setSearchEmployee(''); setSearchProject(''); setDetailCtx(null);
-    setShowAll(false); setHideWeekends(false);  // reset legend toggles too
+    setShowAll(false); setHideWeekends(false);
   };
 
-  // Filter out weekends from date strips when hideWeekends is on
-  const filteredEmpDateStrip  = hideWeekends
-    ? (empData.date_strip  || []).filter(d => !d.is_weekend)
-    : (empData.date_strip  || []);
-  const filteredProjDateStrip = hideWeekends
-    ? (projData.date_strip || []).filter(d => !d.is_weekend)
-    : (projData.date_strip || []);
+  const filteredEmpDateStrip  = hideWeekends ? (empData.date_strip  || []).filter(d => !d.is_weekend) : (empData.date_strip  || []);
+  const filteredProjDateStrip = hideWeekends ? (projData.date_strip || []).filter(d => !d.is_weekend) : (projData.date_strip || []);
 
   const projectCellsByDate = {};
   (projData.projects || []).forEach(proj => {
@@ -113,7 +103,7 @@ export default function Dashboard() {
   });
 
   return (
-    <div style={s.root}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#f0f2f5' }}>
       <Toolbar
         startDate={startDate} endDate={endDate}
         onRangeChange={(st, en) => { setStartDate(st); setEndDate(en); }}
@@ -125,9 +115,9 @@ export default function Dashboard() {
         loading={loadingEmp || loadingProj}
       />
 
-      <div style={s.content}>
-        <div style={s.gridArea} ref={containerRef}>
-          <div style={{ height: empHeight ?? '50%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch' }}>
+        <Box ref={containerRef} sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ height: empHeight ?? '50%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <EmployeePanel
               dateStrip={filteredEmpDateStrip}
               employees={empData.employees || []}
@@ -136,7 +126,6 @@ export default function Dashboard() {
               onSearchChange={setSearchEmployee}
               onCellClick={(emp, date, rect) => setDetailCtx(makeCtx(rect, { type: 'employee', emp, date: new Date(date), leaveStatus: emp.cells?.[date]?.leave_status || null }, false))}
               onDateClick={(date, rect) => {
-                // BUG FIX: don't open Day Overview for weekends — they have no leave data
                 const info = (empData.date_strip || []).find(d => d.date === date);
                 if (info?.is_weekend) return;
                 setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, false));
@@ -145,20 +134,17 @@ export default function Dashboard() {
               projectCells={projectCellsByDate}
               showAll={showAll}
             />
-          </div>
+          </Box>
           <DraggableDivider onResize={handleResize} />
-          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <ProjectPanel
               dateStrip={filteredProjDateStrip}
               projects={projData.projects || []}
               loading={loadingProj}
               searchValue={searchProject}
               onSearchChange={setSearchProject}
-              // {/* BUG FIX: was { type: 'project', proj, ... } but DetailPanel destructures 'project' not 'proj'
-              //     → context.project was undefined → crash "Cannot read properties of undefined (reading 'project_id')" */}
               onCellClick={(proj, date, rect) => setDetailCtx(makeCtx(rect, { type: 'project', project: proj, date: new Date(date) }, true))}
               onDateClick={(date, rect) => {
-                // BUG FIX: don't open Day Overview for weekends — they have no leave data
                 const info = (projData.date_strip || []).find(d => d.date === date);
                 if (info?.is_weekend) return;
                 setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, true));
@@ -166,50 +152,32 @@ export default function Dashboard() {
               scrollRef={projScrollRef}
               employeeCells={employeeCellsByDate}
             />
-          </div>
-        </div>
+          </Box>
+        </Box>
 
-        {/* ── Legend + toggle ── */}
-        <div style={{ position: 'relative', display: 'flex' }}>
-          {/* overflowY:'auto' here — this div is bounded by the parent height, Legend content scrolls inside it */}
-          <div className="legend-scroll"  style={{
-            width: legendVisible ? 220 : 0,
-            height: '100%',
-            transition: 'width 0.3s ease',
-            overflowX: 'hidden',
-            overflowY: legendVisible ? 'auto' : 'hidden',
-          }}>
-            <Legend
-              showAll={showAll}
-              onShowAllChange={setShowAll}
-              hideWeekends={hideWeekends}
-              onHideWeekendsChange={setHideWeekends}
-            />
-          </div>
-          <button onClick={() => setLegendVisible(!legendVisible)} style={{
-            position: 'absolute', left: -30, top: 10,
-            background: '#ffffff', border: '1px solid #e8eaed', borderRadius: 4,
-            width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#9aa0ad', zIndex: 10,
-          }} title="Toggle Legend">
+        {/* Legend */}
+        <Box sx={{ position: 'relative', display: 'flex' }}>
+          <Box className="legend-scroll" sx={{ width: legendVisible ? 220 : 0, height: '100%', transition: 'width 0.3s ease', overflowX: 'hidden', overflowY: legendVisible ? 'auto' : 'hidden' }}>
+            <Legend showAll={showAll} onShowAllChange={setShowAll} hideWeekends={hideWeekends} onHideWeekendsChange={setHideWeekends} />
+          </Box>
+          <Box
+            component="button"
+            onClick={() => setLegendVisible(!legendVisible)}
+            sx={{ position: 'absolute', left: -30, top: 10, background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '4px', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9aa0ad', zIndex: 10 }}
+            title="Toggle Legend"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points={legendVisible ? "9,18 15,12 9,6" : "15,18 9,12 15,6"}/>
             </svg>
-          </button>
-        </div>
-      </div>
+          </Box>
+        </Box>
+      </Box>
 
       <DetailPanel
         context={detailCtx}
         onClose={() => setDetailCtx(null)}
         filters={{ project_ids: selectedProjIds, leave_types: leaveTypes, leave_statuses: leaveStatuses }}
       />
-    </div>
+    </Box>
   );
 }
-
-const s = {
-  root: { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#f0f2f5' },
-  content: { flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch' },
-  gridArea: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-};
