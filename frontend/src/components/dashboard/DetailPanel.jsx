@@ -201,7 +201,7 @@ function ProjectView({ data }) {
   const wfhOnly    = emps.filter(e => e?.leave_type === 'WFH');
   const fullyOut   = emps.filter(e => e?.leave_type && e?.leave_type !== 'WFH' && !e?.is_half_day);
 
-  const risk = project.risk_level || 'LOW';
+  const risk = data?.project?.risk_level || 'LOW';
 
   return (
     <>
