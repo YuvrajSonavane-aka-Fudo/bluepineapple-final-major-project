@@ -37,31 +37,31 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
       }}
     >
       {hasLeave && !isHalfDay && !isRejected && !isPending && (
-        <div style={{ position: 'absolute', inset: -1, background: baseColor }} />
+        <div style={{ position: 'absolute', inset: 0.2, background: baseColor }} />
       )}
       {hasLeave && !isHalfDay && !isWFH && !isRejected && isPending && (
-        <div style={{ position: 'absolute', inset: -1, border: '2px dashed #994545', background: 'transparent' }} />
+        <div style={{ position: 'absolute', inset: 0.2, border: '2px dashed #994545', background: 'transparent' }} />
       )}
       {hasLeave && isRejected && !isHalfDay && (
-        <div style={{ position: 'absolute', inset: -1, background: '#fff1f2', border: '1px solid #fecdd3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', inset: 0.2, background: '#fff1f2', border: '1px solid #fecdd3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </div>
       )}
       {hasLeave && isHalfDay && !isRejected && !isPending && session === 'First Half' && (
-        <div style={{ position: 'absolute', inset: -1, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, background: baseColor, clipPath: 'polygon(0 0,100% 0,0 100%)' }} />
         </div>
       )}
       {hasLeave && isHalfDay && !isRejected && !isPending && session === 'Second Half' && (
-        <div style={{ position: 'absolute', inset: -1, overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: -1, background: baseColor, clipPath: 'polygon(100% 0,100% 100%,0 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0.2, background: baseColor, clipPath: 'polygon(100% 0,100% 100%,0 100%)' }} />
         </div>
       )}
       {hasLeave && isHalfDay && isPending && (
-        <div style={{ position: 'absolute', inset: -1, border: '2px dashed #994545', background: 'transparent' }} />
+        <div style={{ position: 'absolute', inset: 0.2, border: '2px dashed #994545', background: 'transparent' }} />
       )}
       {hasLeave && isHalfDay && isRejected && (
-        <div style={{ position: 'absolute', inset: -1, background: '#fff1f2', border: '1px solid #fecdd3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', inset: 0.2, background: '#fff1f2', border: '1px solid #fecdd3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </div>
       )}
