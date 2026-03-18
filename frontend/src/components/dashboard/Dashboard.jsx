@@ -115,6 +115,15 @@ export default function Dashboard() {
     preferAbove,
   });
 
+  // Export filters — includes all active selection criteria
+  const exportFilters = {
+    start_date:     fmt(startDate),
+    end_date:       fmt(endDate),
+    project_ids:    selectedProjIds,
+    leave_types:    leaveTypes,
+    leave_statuses: leaveStatuses,
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#f0f2f5' }}>
       <Toolbar
@@ -184,7 +193,14 @@ export default function Dashboard() {
         </Box>
 
         <Box sx={{ width: legendVisible ? 220 : 0, flexShrink: 0, height: '100%', transition: 'width 0.3s ease', overflowX: 'hidden', overflowY: legendVisible ? 'auto' : 'hidden', borderLeft: '1px solid #e8eaed' }}>
-          <Legend showAll={showAll} onShowAllChange={setShowAll} hideWeekends={hideWeekends} onHideWeekendsChange={setHideWeekends} />
+          <Legend
+            showAll={showAll}           onShowAllChange={setShowAll}
+            hideWeekends={hideWeekends} onHideWeekendsChange={setHideWeekends}
+            empData={empData}
+            projData={projData}
+            dateStrip={filteredDateStrip}
+            filters={exportFilters}
+          />
         </Box>
       </Box>
 

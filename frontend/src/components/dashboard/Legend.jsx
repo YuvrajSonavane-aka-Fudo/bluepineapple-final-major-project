@@ -1,5 +1,7 @@
 // src/components/dashboard/Legend.jsx
-import { Box, Typography, Switch, Divider } from '@mui/material';
+import { Box, Typography, Switch, Divider, Button, CircularProgress } from '@mui/material';
+import { useState } from 'react';
+import { exportDashboardToExcel } from './ExportToExcel';
 
 const LEAVE_TYPES = [
   { label: 'Paid Leave',   color: '#2563EB' },
@@ -12,14 +14,14 @@ const DAY_PORTION = [
   { label: 'Half Day PM', type: 'half-pm' },
 ];
 const STATUSES = [
-  { label: 'Approved',        type: 'check' },
+  { label: 'Approved',         type: 'check' },
   { label: 'Pending Approval', type: 'dashed' },
-  { label: 'Rejected',        type: 'x' },
+  { label: 'Rejected',         type: 'x' },
 ];
 const TIMELINE = [
-  { label: 'Current Day',   type: 'today' },
-  { label: 'Weekend',       type: 'weekend' },
-  { label: 'Public Holiday',type: 'holiday' },
+  { label: 'Current Day',    type: 'today' },
+  { label: 'Weekend',        type: 'weekend' },
+  { label: 'Public Holiday', type: 'holiday' },
 ];
 const RISK_LEVELS = [
   { label: 'Low Risk',    bg: 'rgba(34,197,94,0.30)',  border: 'rgba(34,197,94,0.5)'  },
@@ -54,10 +56,27 @@ function Section({ title, children }) {
   );
 }
 
-export default function Legend({ showAll, onShowAllChange, hideWeekends, onHideWeekendsChange }) {
+export default function Legend({
+  showAll, onShowAllChange,
+  hideWeekends, onHideWeekendsChange,
+  // export props passed from Dashboard
+  empData, projData, dateStrip, filters,
+}) {
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = () => {
+    setExporting(true);
+    try {
+      exportDashboardToExcel({ empData, projData, dateStrip, filters });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Box sx={{ width: 220, minWidth: 220, background: '#fff', borderLeft: '1px solid #e5e7eb', py: 1.5 }}>
-      {/* Filters */}
+
+      {/* ── Filters + Export ── */}
       <Box sx={{ px: 1.75, pb: 1.75, borderBottom: '1px solid #e5e7eb' }}>
         <Typography component="p" sx={sectionTitle}>FILTERS</Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
@@ -79,6 +98,40 @@ export default function Legend({ showAll, onShowAllChange, hideWeekends, onHideW
               />
             </Box>
           ))}
+
+          {/* Export button — sits right below the 2 filter toggles */}
+          <Button
+            onClick={handleExport}
+            disabled={exporting}
+            fullWidth
+            size="small"
+            variant="contained"
+            startIcon={
+              exporting
+                ? <CircularProgress size={12} sx={{ color: '#fff' }} />
+                : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                )
+            }
+            sx={{
+              mt: 0.5,
+              fontSize: 11,
+              fontWeight: 600,
+              textTransform: 'none',
+              background: '#2563EB',
+              borderRadius: '6px',
+              boxShadow: 'none',
+              py: 0.6,
+              '&:hover': { background: '#1d4ed8', boxShadow: 'none' },
+              '&:disabled': { background: '#93c5fd', color: '#fff' },
+            }}
+          >
+            {exporting ? 'Exporting…' : 'Export to Excel'}
+          </Button>
         </Box>
       </Box>
 

@@ -167,8 +167,11 @@ def dashboard_employees(request):
                 (l for l in emp_leaves if l.start_date <= current <= l.end_date),
                 None,
             )
-            cells[str(current)] = build_cell_payload(leave_today)
-            current += timedelta(days = 1)
+            cell = build_cell_payload(leave_today)
+            if leave_today and cell:
+                cell['project_id'] = leave_today.project_id
+            cells[str(current)] = cell
+            current += timedelta(days=1)
 
         employee_data.append(
             {
