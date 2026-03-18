@@ -200,7 +200,7 @@ function ProjectView({ data }) {
   const wfhOnly    = withLeave.filter(e => !e?.is_half_day && e?.leave_type === 'WFH');
   const fullyOut   = withLeave.filter(e => !e?.is_half_day && e?.leave_type !== 'WFH');
   const availCount = emps.length - withLeave.length;
-  const risk = data?.risk_level || 'LOW';
+  const risk = data?.project?.risk_level || 'LOW';
 
   return (
     <>
