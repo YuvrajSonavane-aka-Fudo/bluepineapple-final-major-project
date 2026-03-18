@@ -1,13 +1,34 @@
 // src/components/dashboard/EmployeePanel.jsx
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { parseISO, isToday } from 'date-fns';
 import { Box, Typography } from '@mui/material';
 import LeaveCell from '../shared/LeaveCell';
 
-const CELL_W   = 35;
-const ROW_H    = 35;
-const FROZEN_W = 300;
+const CELL_W       = 35;
+const ROW_H        = 35;
+const FROZEN_W     = 300;
+const FROZEN_W_MOB = 140;
 const TODAY_BORDER = '#994545';
+
+function useIsMobile() {
+  const [mob, setMob] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const fn = () => setMob(window.innerWidth < 768);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return mob;
+}
+
+function useFrozenWidth() {
+  const [fw, setFw] = useState(() => window.innerWidth < 768 ? Math.min(140, Math.floor(window.innerWidth * 0.36)) : 300);
+  useEffect(() => {
+    const fn = () => setFw(window.innerWidth < 768 ? Math.min(140, Math.floor(window.innerWidth * 0.36)) : 300);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return fw;
+}
 
 export default function EmployeePanel({
   dateStrip = [], employees = [], loading,
@@ -19,6 +40,8 @@ export default function EmployeePanel({
   projScrollRef,
   showAll = true,
 }) {
+  const isMobile = useIsMobile();
+  const FW = useFrozenWidth();
   const rowRefs  = useRef([]);
   const syncing  = useRef(false);
   const bodyRef  = useRef(null);
@@ -53,6 +76,28 @@ export default function EmployeePanel({
     return () => el.removeEventListener('wheel', handler);
   }, [syncAll]);
 
+  // ── Touch scroll sync (mobile swipe) ──
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    let startX = 0, startScroll = 0;
+    const onTouchStart = (e) => {
+      startX = e.touches[0].clientX;
+      startScroll = rowRefs.current.find(Boolean)?.scrollLeft || 0;
+    };
+    const onTouchMove = (e) => {
+      const dx = startX - e.touches[0].clientX;
+      const newScroll = Math.max(0, startScroll + dx);
+      syncAll(newScroll);
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove',  onTouchMove,  { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove',  onTouchMove);
+    };
+  }, [syncAll]);
+
   const filtered = employees.filter(emp => {
     if (searchMode === 'EMP' && globalSearch && !emp.full_name.toLowerCase().includes(globalSearch.toLowerCase())) return false;
     if (!showAll) return Object.values(emp.cells || {}).some(c => c !== null);
@@ -75,19 +120,33 @@ export default function EmployeePanel({
                   <Box key={emp.user_id} sx={{ display: 'flex', alignItems: 'stretch' }}>
                     {/* Frozen label */}
                     <Box sx={{
-                      width: FROZEN_W, minWidth: FROZEN_W, display: 'flex', alignItems: 'center',
-                      px: 1.5, background: '#ffffff', borderRight: '2px solid #c8cdd6',
-                      borderBottom: '1px solid #e8eaed', flexShrink: 0, gap: 1,
+                      width: FW, minWidth: FW, display: 'flex', alignItems: 'center',
+                      px: isMobile ? 1 : 1.5,
+                      background: '#ffffff', borderRight: '2px solid #c8cdd6',
+                      borderBottom: '1px solid #e8eaed', flexShrink: 0, gap: isMobile ? 0.5 : 1,
                       height: ROW_H, boxSizing: 'border-box',
                     }}>
-                      <Typography sx={{ fontSize: 11, color: '#9aa0ad', fontFamily: "'DM Mono', monospace", flexShrink: 0, minWidth: 40 }}>
+                      {/* ID — hide on mobile if too cramped, show smaller */}
+                      <Typography sx={{
+                        fontSize: isMobile ? 9 : 11,
+                        color: '#9aa0ad', fontFamily: "'DM Mono', monospace",
+                        flexShrink: 0, minWidth: isMobile ? 28 : 40,
+                        display: isMobile ? 'none' : 'block',
+                      }}>
                         #{emp.user_id.toString().padStart(4, '0')}
                       </Typography>
-                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#1a1f2e', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {emp.full_name}
-                      </Typography>
-                      <Box sx={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 99, px: 1, py: '2px', flexShrink: 0 }}>
-                        <Typography sx={{ fontSize: 11, fontWeight: 700, color: '#4338ca', fontFamily: "'DM Mono', monospace" }}>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        {isMobile && (
+                          <Typography sx={{ fontSize: 9, color: '#9aa0ad', fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
+                            #{emp.user_id.toString().padStart(4, '0')}
+                          </Typography>
+                        )}
+                        <Typography sx={{ fontSize: isMobile ? 11 : 13, fontWeight: 600, color: '#1a1f2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: isMobile ? 1.3 : 'inherit' }}>
+                          {emp.full_name}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 99, px: isMobile ? '5px' : 1, py: '2px', flexShrink: 0 }}>
+                        <Typography sx={{ fontSize: isMobile ? 9 : 11, fontWeight: 700, color: '#4338ca', fontFamily: "'DM Mono', monospace" }}>
                           {leaveCount.toFixed(1)}
                         </Typography>
                       </Box>

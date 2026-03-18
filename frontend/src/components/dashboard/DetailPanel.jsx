@@ -56,12 +56,30 @@ export default function DetailPanel({ context, onClose, filters }) {
     call.then(setData).catch(e => setError(e?.message || 'Failed to load.')).finally(() => setLoading(false));
   }, [context, projectIdsKey, leaveStatusesKey, leaveTypesKey]);
 
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 900
+  );
+  useEffect(() => {
+    const check = () => setIsMobileView(window.innerWidth < 900);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   useLayoutEffect(() => {
     if (!context || !panelRef.current) return;
-    const { anchorX, anchorY, preferAbove } = context;
     const vw = window.innerWidth, vh = window.innerHeight;
     const rect = panelRef.current.getBoundingClientRect();
     const modalH = rect.height, modalW = rect.width;
+
+    // Mobile: center horizontally, position vertically centered
+    if (vw < 900) {
+      const left = Math.max(GAP, (vw - modalW) / 2);
+      const top  = Math.max(GAP, (vh - modalH) / 2);
+      setPos({ top, left });
+      return;
+    }
+
+    const { anchorX, anchorY, preferAbove } = context;
     const left = Math.max(GAP, Math.min(vw - modalW - GAP, anchorX - modalW / 2));
     let top;
     if (preferAbove) {
@@ -79,13 +97,69 @@ export default function DetailPanel({ context, onClose, filters }) {
   const { type, date } = context;
   const parsedDate = date instanceof Date ? date : (date ? new Date(date + 'T12:00:00') : null);
   const dateLabel  = parsedDate ? format(parsedDate, 'MMM d, yyyy') : '';
-  const W = type === 'day' ? DAY_W : PANEL_W;
+  const baseW = type === 'day' ? DAY_W : PANEL_W;
+  const W = isMobileView ? Math.min(baseW, window.innerWidth - GAP * 2) : baseW;
   const titles = {
     employee: `${context.emp?.full_name || 'Employee'} · ${dateLabel}`,
     project:  `${context.project?.project_name || 'Project'} · ${dateLabel}`,
     day:      `Day Overview · ${dateLabel}`,
   };
 
+  const content = (
+    <>
+      {loading && <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}><CircularProgress size={18} sx={{ color: '#3b5bdb' }} /></Box>}
+      {error && <Box sx={{ p: 1, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontSize: 11 }}>{error}</Box>}
+      {!loading && !error && data && (
+        <>
+          {type === 'employee' && <EmployeeView data={data} leaveStatus={context.leaveStatus} />}
+          {type === 'project'  && <ProjectView  data={data} />}
+          {type === 'day'      && <DayView      data={data} />}
+        </>
+      )}
+    </>
+  );
+
+  // ── Mobile: bottom sheet ──
+  if (isMobileView) {
+    return (
+      <>
+        {/* Backdrop */}
+        <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.4)' }} />
+        {/* Sheet */}
+        <Box
+          onClick={e => e.stopPropagation()}
+          sx={{
+            position: 'fixed', bottom: 0, left: 0, right: 0,
+            zIndex: 201,
+            background: '#fff',
+            borderRadius: '16px 16px 0 0',
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.18)',
+            display: 'flex', flexDirection: 'column',
+            maxHeight: '70vh',
+          }}
+        >
+          {/* Drag handle */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1, pb: 0.5, flexShrink: 0 }}>
+            <Box sx={{ width: 36, height: 4, borderRadius: 99, background: '#e0e0e0' }} />
+          </Box>
+          {/* Header */}
+          <Box sx={{ px: 2, py: 1, borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#1a1f2e' }}>{titles[type]}</Typography>
+            <Box component="button" onClick={onClose}
+              sx={{ width: 24, height: 24, borderRadius: '50%', background: '#f0f2f5', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 0 }}>
+              <CloseIcon sx={{ fontSize: 13, color: '#5a6272' }} />
+            </Box>
+          </Box>
+          {/* Scrollable content */}
+          <Box sx={{ overflowY: 'auto', p: '8px 14px 20px', flex: 1, minHeight: 0 }}>
+            {content}
+          </Box>
+        </Box>
+      </>
+    );
+  }
+
+  // ── Desktop: floating popup ──
   return (
     <>
       <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, zIndex: 200 }} />
@@ -109,15 +183,7 @@ export default function DetailPanel({ context, onClose, filters }) {
           </IconButton>
         </Box>
         <Box sx={{ overflowY: 'auto', p: '6px 10px 10px', flex: 1, minHeight: 0, maxHeight: 'calc(100vh - 120px)' }}>
-          {loading && <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}><CircularProgress size={18} sx={{ color: '#3b5bdb' }} /></Box>}
-          {error && <Box sx={{ p: 1, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontSize: 11 }}>{error}</Box>}
-          {!loading && !error && data && (
-            <>
-              {type === 'employee' && <EmployeeView data={data} leaveStatus={context.leaveStatus} />}
-              {type === 'project'  && <ProjectView  data={data} />}
-              {type === 'day'      && <DayView      data={data} />}
-            </>
-          )}
+          {content}
         </Box>
       </Paper>
     </>
