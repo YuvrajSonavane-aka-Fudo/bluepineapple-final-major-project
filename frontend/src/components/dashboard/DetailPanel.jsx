@@ -23,12 +23,6 @@ function StatusIcon({ status }) {
   return null;
 }
 
-function calcRisk(onLeave, assigned) {
-  if (!assigned) return 'LOW';
-  const pct = onLeave / assigned;
-  return pct >= 0.6 ? 'HIGH' : pct >= 0.4 ? 'MEDIUM' : 'LOW';
-}
-
 const RISK_COLOR = { HIGH: '#dc2626', MEDIUM: '#d97706', LOW: '#16a34a' };
 const RISK_BG    = { HIGH: '#fef2f2', MEDIUM: '#fffbeb', LOW: '#f0fdf4' };
 const PANEL_W = 320;
@@ -195,44 +189,60 @@ function EmployeeView({ data, leaveStatus }) {
 
 function ProjectView({ data }) {
   const emps = data?.employees || [];
-  const withLeave  = emps.filter(e => !!e?.leave_type);
-  const partialOut = withLeave.filter(e =>  e?.is_half_day);
-  const wfhOnly    = withLeave.filter(e => !e?.is_half_day && e?.leave_type === 'WFH');
-  const fullyOut   = withLeave.filter(e => !e?.is_half_day && e?.leave_type !== 'WFH');
-  const availCount = emps.length - withLeave.length;
-  const risk = data?.project?.risk_level || 'LOW';
+  const project = data?.project || {};
+
+  // Use backend values instead of recalculating
+  const total        = project.assigned_employees ?? emps.length;
+  const onLeave      = project.on_leave_count ?? 0;
+  const available    = project.available_workforce ?? 0;
+
+  // Frontend-only grouping for display
+  const partialOut = emps.filter(e => e?.is_half_day);
+  const wfhOnly    = emps.filter(e => e?.leave_type === 'WFH');
+  const fullyOut   = emps.filter(e => e?.leave_type && e?.leave_type !== 'WFH' && !e?.is_half_day);
+
+  const risk = project.risk_level || 'LOW';
 
   return (
     <>
       <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', py: 1 }}>
-        <Mini label="Total"     val={emps.length} />
-        <Mini label="On Leave"  val={fullyOut.length}   c="#dc2626" />
+        <Mini label="Total"     val={total} />
+        <Mini label="On Leave"  val={onLeave}   c="#dc2626" />
         <Mini label="Partial"   val={partialOut.length} c="#d97706" />
         <Mini label="WFH"       val={wfhOnly.length}    c="#059669" />
-        <Mini label="Available" val={availCount}        c="#16a34a" />
+        <Mini label="Available" val={available} c="#16a34a" />
         <RiskTag risk={risk} />
       </Box>
-      <SectionLabel>ON LEAVE ({withLeave.length})</SectionLabel>
-      {withLeave.length === 0
+
+      <SectionLabel>ON LEAVE ({fullyOut.length + partialOut.length})</SectionLabel>
+
+      {(fullyOut.length + partialOut.length) === 0
         ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>All available.</Typography>
-        : withLeave.map(emp => (
-            <Row key={emp.user_id}>
-              <Box sx={{ flex: 1 }}>
-                <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{emp.full_name}</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
-                  {emp.leave_type && (
-                    <>
-                      <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                      <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
-                        {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
-                      </Typography>
-                    </>
-                  )}
+        : emps
+            .filter(emp => emp.leave_type)
+            .map(emp => (
+              <Row key={emp.user_id}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>
+                    {emp.full_name}
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
+                    <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
+                    <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
+                      {emp.leave_type}
+                      {emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-              <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} leaveType={emp.leave_type} />
-            </Row>
-          ))
+
+                <Avail
+                  hasLeave={!!emp.leave_type}
+                  isHalfDay={emp.is_half_day}
+                  leaveType={emp.leave_type}
+                />
+              </Row>
+            ))
       }
     </>
   );
