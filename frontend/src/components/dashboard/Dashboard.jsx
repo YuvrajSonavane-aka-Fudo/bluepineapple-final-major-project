@@ -62,10 +62,18 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(() => {
     const body = buildBody();
+
     setLoadingEmp(true);
-    fetchEmployeeDashboard(body).then(setEmpData).catch(err => { if (err?.response?.status === 401) logout(); }).finally(() => setLoadingEmp(false));
+    fetchEmployeeDashboard(body)
+      .then(setEmpData)
+      .catch(err => { if (err?.response?.status === 401) logout(); })
+      .finally(() => setLoadingEmp(false));
+
     setLoadingProj(true);
-    fetchProjectDashboard(body).then(setProjData).catch(err => { if (err?.response?.status === 401) logout(); }).finally(() => setLoadingProj(false));
+    fetchProjectDashboard(body)
+      .then(setProjData)
+      .catch(err => { if (err?.response?.status === 401) logout(); })
+      .finally(() => setLoadingProj(false));
   }, [buildBody, logout]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
@@ -85,10 +93,12 @@ export default function Dashboard() {
   const projectCellsByDate = {};
   (projData.projects || []).forEach(proj => {
     Object.entries(proj.cells || {}).forEach(([date, cell]) => {
-      if (!cell || cell.employees_on_leave === 0) return;
+      if (!cell || (cell.employees_on_leave ?? 0) === 0) return;
       const order = { HIGH: 3, MEDIUM: 2, LOW: 1 };
-      if (!projectCellsByDate[date] || order[cell.risk_level] > order[projectCellsByDate[date]])
-        projectCellsByDate[date] = cell.risk_level;
+      const rl = cell.risk_level;
+      if (!rl) return;
+      if (!projectCellsByDate[date] || order[rl] > order[projectCellsByDate[date]])
+        projectCellsByDate[date] = rl;
     });
   });
 
@@ -121,7 +131,6 @@ export default function Dashboard() {
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch', position: 'relative' }}>
         <Box ref={containerRef} sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-          {/* ── Shared sticky header: frozen label col + single DateStrip ── */}
           <SharedHeader
             dateStrip={filteredDateStrip}
             projectCells={projectCellsByDate}
@@ -142,7 +151,6 @@ export default function Dashboard() {
             onToggleLegend={() => setLegendVisible(v => !v)}
           />
 
-          {/* ── Employee panel (no header) ── */}
           <Box sx={{ height: empHeight ?? '50%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <EmployeePanel
               dateStrip={filteredDateStrip}
@@ -160,7 +168,6 @@ export default function Dashboard() {
 
           <DraggableDivider onResize={handleResize} />
 
-          {/* ── Project panel (no header) ── */}
           <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <ProjectPanel
               dateStrip={filteredDateStrip}
@@ -176,7 +183,6 @@ export default function Dashboard() {
           </Box>
         </Box>
 
-        {/* Legend panel */}
         <Box sx={{ width: legendVisible ? 220 : 0, flexShrink: 0, height: '100%', transition: 'width 0.3s ease', overflowX: 'hidden', overflowY: legendVisible ? 'auto' : 'hidden', borderLeft: '1px solid #e8eaed' }}>
           <Legend showAll={showAll} onShowAllChange={setShowAll} hideWeekends={hideWeekends} onHideWeekendsChange={setHideWeekends} />
         </Box>
