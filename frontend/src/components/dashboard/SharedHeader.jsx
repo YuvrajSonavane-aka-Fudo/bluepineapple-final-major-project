@@ -1,13 +1,34 @@
 // src/components/dashboard/SharedHeader.jsx
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { InputBase, Box, Typography } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DateStrip from './DateStrip';
 
-const FROZEN_W = 300;
+const FROZEN_W     = 300;
+const FROZEN_W_MOB = 140;
 const HEADER_H = 40;
 const THUMB_H  = 3;
 const THUMB_W  = 350;
+
+function useIsMobile() {
+  const [mob, setMob] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const fn = () => setMob(window.innerWidth < 768);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return mob;
+}
+
+function useFrozenWidth() {
+  const [fw, setFw] = useState(() => window.innerWidth < 768 ? Math.min(140, Math.floor(window.innerWidth * 0.36)) : 300);
+  useEffect(() => {
+    const fn = () => setFw(window.innerWidth < 768 ? Math.min(140, Math.floor(window.innerWidth * 0.36)) : 300);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return fw;
+}
 
 export default function SharedHeader({
   dateStrip = [],
@@ -24,6 +45,8 @@ export default function SharedHeader({
   legendVisible,
   onToggleLegend,
 }) {
+  const isMobile = useIsMobile();
+  const FW = useFrozenWidth();
   const headerRef    = useRef(null);
   const scrollbarRef = useRef(null);
   const thumbRef     = useRef(null);
@@ -154,14 +177,24 @@ export default function SharedHeader({
       </Box>
       {/* Frozen column: ID label + global search + L.C. label */}
       <Box ref={frozenRef} sx={{
-        width: FROZEN_W, minWidth: FROZEN_W, display: 'flex', alignItems: 'center', gap: 1,
-        px: 1.5, pl: '21px', background: '#f8f9fb', borderRight: '2px solid #c8cdd6',
+        width: FW, minWidth: FW, display: 'flex', alignItems: 'center', gap: isMobile ? 0.5 : 1,
+        px: isMobile ? 0.75 : 1.5, pl: isMobile ? '8px' : '21px',
+        background: '#f8f9fb', borderRight: '2px solid #c8cdd6',
         flexShrink: 0, height: '100%', boxSizing: 'border-box',
       }}>
-        <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0 }}>
-          ID
-        </Typography>
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 0.75, background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '6px', px: 0.75, py: 0.5, mx: 1.5, overflow: 'hidden' }}>
+        {/* On desktop show "ID" label; on mobile skip it to save space */}
+        {!isMobile && (
+          <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0 }}>
+            ID
+          </Typography>
+        )}
+        <Box sx={{
+          flex: 1, display: 'flex', alignItems: 'center', gap: 0.5,
+          background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '6px',
+          px: 0.5, py: 0.4,
+          mx: isMobile ? 0 : 1.5,
+          overflow: 'hidden', minWidth: 0,
+        }}>
           {/* Mode pill toggle */}
           <Box sx={{ display: 'flex', background: '#f0f2f5', borderRadius: '4px', p: '2px', flexShrink: 0, gap: '2px' }}>
             {['EMP', 'PROJ'].map(mode => (
@@ -183,26 +216,29 @@ export default function SharedHeader({
               </Box>
             ))}
           </Box>
-          <SearchIcon sx={{ fontSize: 13, color: '#9aa0ad', flexShrink: 0 }} />
+          {!isMobile && <SearchIcon sx={{ fontSize: 13, color: '#9aa0ad', flexShrink: 0 }} />}
           <InputBase
-            placeholder={searchMode === 'EMP' ? 'Search Employees...' : 'Search Projects...'}
+            placeholder={isMobile ? (searchMode === 'EMP' ? 'Search…' : 'Search…') : (searchMode === 'EMP' ? 'Search Employees...' : 'Search Projects...')}
             value={globalSearch}
             onChange={e => onGlobalSearchChange(e.target.value)}
-            sx={{ flex: 1, fontSize: 12, color: '#1a1f2e', '& input': { p: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" } }}
+            sx={{ flex: 1, fontSize: isMobile ? 11 : 12, color: '#1a1f2e', minWidth: 0, '& input': { p: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" } }}
           />
           {globalSearch && (
             <Box
               component="button"
               onClick={() => onGlobalSearchChange('')}
-              sx={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#9aa0ad', p: 0, flexShrink: 0, '&:hover': { color: '#5a6272' } }}
+              sx={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#9aa0ad', p: 0, flexShrink: 0 }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </Box>
           )}
         </Box>
-        <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0, ml: 'auto', pr: 1 }}>
-          L.C.
-        </Typography>
+        {/* L.C. label — hide on mobile, no room */}
+        {!isMobile && (
+          <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0, ml: 'auto', pr: 1 }}>
+            L.C.
+          </Typography>
+        )}
       </Box>
 
       {/* Scrollable date strip + custom scrollbar thumb */}

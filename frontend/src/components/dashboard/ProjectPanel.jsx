@@ -1,13 +1,34 @@
 // src/components/dashboard/ProjectPanel.jsx
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { parseISO, isToday } from 'date-fns';
 import { Box, Typography } from '@mui/material';
 import RiskCell from '../shared/RiskCell';
 
-const CELL_W   = 35;
-const ROW_H    = 35;
-const FROZEN_W = 300;
+const CELL_W       = 35;
+const ROW_H        = 35;
+const FROZEN_W     = 300;
+const FROZEN_W_MOB = 140;
 const TODAY_BORDER = '#994545';
+
+function useIsMobile() {
+  const [mob, setMob] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const fn = () => setMob(window.innerWidth < 768);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return mob;
+}
+
+function useFrozenWidth() {
+  const [fw, setFw] = useState(() => window.innerWidth < 768 ? Math.min(140, Math.floor(window.innerWidth * 0.36)) : 300);
+  useEffect(() => {
+    const fn = () => setFw(window.innerWidth < 768 ? Math.min(140, Math.floor(window.innerWidth * 0.36)) : 300);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+  return fw;
+}
 
 export default function ProjectPanel({
   dateStrip = [], projects = [], loading,
@@ -18,6 +39,8 @@ export default function ProjectPanel({
   headerScrollRef,
   empScrollRef,
 }) {
+  const isMobile = useIsMobile();
+  const FW = useFrozenWidth();
   const rowRefs  = useRef([]);
   const syncing  = useRef(false);
   const bodyRef  = useRef(null);
@@ -52,6 +75,28 @@ export default function ProjectPanel({
     return () => el.removeEventListener('wheel', handler);
   }, [syncAll]);
 
+  // ── Touch scroll sync (mobile swipe) ──
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    let startX = 0, startScroll = 0;
+    const onTouchStart = (e) => {
+      startX = e.touches[0].clientX;
+      startScroll = rowRefs.current.find(Boolean)?.scrollLeft || 0;
+    };
+    const onTouchMove = (e) => {
+      const dx = startX - e.touches[0].clientX;
+      const newScroll = Math.max(0, startScroll + dx);
+      syncAll(newScroll);
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove',  onTouchMove,  { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove',  onTouchMove);
+    };
+  }, [syncAll]);
+
   // Filter by global search (matches project name)
   const filtered = projects.filter(p =>
     searchMode !== 'PROJ' || !globalSearch || p.project_name.toLowerCase().includes(globalSearch.toLowerCase())
@@ -71,12 +116,13 @@ export default function ProjectPanel({
                 <Box key={proj.project_id} sx={{ display: 'flex', alignItems: 'stretch' }}>
                   {/* Frozen label */}
                   <Box sx={{
-                    width: FROZEN_W, minWidth: FROZEN_W, display: 'flex', alignItems: 'center',
-                    px: 1.75, background: '#ffffff', borderRight: '2px solid #c8cdd6',
+                    width: FW, minWidth: FW, display: 'flex', alignItems: 'center',
+                    px: isMobile ? 1 : 1.75,
+                    background: '#ffffff', borderRight: '2px solid #c8cdd6',
                     borderBottom: '1px solid #e8eaed', flexShrink: 0,
                     height: ROW_H, boxSizing: 'border-box',
                   }}>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#1a1f2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <Typography sx={{ fontSize: isMobile ? 11 : 13, fontWeight: 600, color: '#1a1f2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {proj.project_name}
                     </Typography>
                   </Box>
