@@ -25,12 +25,12 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   if (isWeekend) cellBg = 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)';
   if (isHoliday && !isWeekend) cellBg = '#fefce8';
 
-  const risk           = cell?.risk_level ?? null;
-  const onLeaveCount   = cell?.employees_on_leave ?? 0;
-  const wfhCount       = cell?.wfh_count ?? 0;
-  const partialCount   = cell?.partial_count ?? 0;
+  const risk    = cell?.risk_level        ?? null;
+  const onLeave = cell?.employees_on_leave ?? 0;
+  const wfh     = cell?.wfh_count          ?? 0;
+  const partial = cell?.partial_count      ?? 0;
 
-  const shouldHighlight = onLeaveCount > 0 || wfhCount > 0 || partialCount > 0;
+  const shouldHighlight = onLeave > 0 || wfh > 0 || partial > 0;
   const showRiskColor   = !isWeekend && !isHoliday && risk !== null && shouldHighlight;
   const bg              = showRiskColor ? (RISK_COLORS[risk] || RISK_COLORS['LOW']) : cellBg;
 
