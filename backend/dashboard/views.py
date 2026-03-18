@@ -610,7 +610,7 @@ def project_cell_details(request):
                 "user_id":          emp.id,
                 "full_name":        emp.full_name,
                 "role":             emp.role,
-                "availability":     "WFH",
+                "availability":     "PARTIALLY_AVAIALABLE",
                 "leave_type":       "WFH",
                 "is_half_day":      True,
                 "half_day_session": leave.half_day_session,
