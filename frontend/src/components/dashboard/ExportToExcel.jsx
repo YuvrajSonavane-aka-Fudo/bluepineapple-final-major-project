@@ -213,9 +213,7 @@ function applySheetStyling(ws, wsData) {
   ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'A2', sqref: 'A2' };
 }
 
-// ---------------------------------------------------------------------------
-// Filename
-// ---------------------------------------------------------------------------
+
 function buildFilename(filters) {
   const today  = format(new Date(), 'yyyyMMdd');
   const start  = filters.start_date ? `_${filters.start_date}` : '';

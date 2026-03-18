@@ -213,6 +213,8 @@ def dashboard_projects(request):
             }
         ]
     }
+ 
+    WFH employees are still working and do NOT reduce available workforce or affect risk.
     """
     user = get_user_from_request(request)
     if not user:
@@ -252,22 +254,23 @@ def dashboard_projects(request):
         project_members.setdefault(a.project_id, set()).add(a.user_id)
         all_member_ids.add(a.user_id)
  
-    # Leaves filed directly under a scoped project
+    # Leaves filed directly under a scoped project — excluding WFH
+    # since WFH does not reduce availability or affect risk
     scoped_leave_qs = LeaveApplication.objects.filter(
         user_id__in=all_member_ids,
         project_id__in=scoped_pids,
         start_date__lte=end_date,
         end_date__gte=start_date,
-    )
+    ).exclude(leave_type="WFH")
     if leave_statuses:
         scoped_leave_qs = scoped_leave_qs.filter(leave_status__in=leave_statuses)
  
-    # Spillover: leaves filed under ANY project outside scoped_pids
+    # Spillover: leaves filed under ANY project outside scoped_pids — excluding WFH
     spillover_leave_qs = LeaveApplication.objects.filter(
         user_id__in=all_member_ids,
         start_date__lte=end_date,
         end_date__gte=start_date,
-    ).exclude(project_id__in=scoped_pids)
+    ).exclude(project_id__in=scoped_pids).exclude(leave_type="WFH")
     if leave_statuses:
         spillover_leave_qs = spillover_leave_qs.filter(leave_status__in=leave_statuses)
  
@@ -277,7 +280,7 @@ def dashboard_projects(request):
         key = (leave.user_id, leave.project_id)
         leaves_by_user_project.setdefault(key, []).append(leave)
  
-    # { user_id: [leaves] } — ALL leaves across every project (scoped + spillover)
+    # { user_id: [leaves] } — ALL non-WFH leaves across every project (scoped + spillover)
     # Used as fallback when no direct leave exists for a specific project
     all_leaves_by_user = {}
     for leave in scoped_leave_qs:
@@ -286,11 +289,14 @@ def dashboard_projects(request):
         all_leaves_by_user.setdefault(leave.user_id, []).append(leave)
  
     def is_on_leave(uid, project_id, current_date):
-        # Check direct leave for this specific project first
+        """
+        Returns True if the user is actually absent (non-WFH leave) for this
+        project on this date. WFH is excluded — those employees are still working.
+        Checks direct project leave first, then spills over from other projects.
+        """
         direct = leaves_by_user_project.get((uid, project_id), [])
         if any(l.start_date <= current_date <= l.end_date for l in direct):
             return True
-        # Fall back to ANY leave on this date from any other project (spillover)
         all_leaves = all_leaves_by_user.get(uid, [])
         return any(
             l.start_date <= current_date <= l.end_date
@@ -527,6 +533,8 @@ def project_cell_details(request):
                 }
             ]
         }
+ 
+    WFH employees are still working and do NOT reduce available workforce or affect risk.
     """
     user = get_user_from_request(request)
     if not user:
@@ -562,7 +570,9 @@ def project_cell_details(request):
  
     members = User.objects.filter(id__in=member_ids, is_active=True)
  
-    # Direct leaves — filed under this specific project
+    # Direct leaves — filed under this specific project (ALL types including WFH)
+    # We fetch all types here so WFH shows correctly in the employee list,
+    # but WFH is excluded from on_leave_count and risk calculation below.
     direct_leave_qs = LeaveApplication.objects.filter(
         user__in=members,
         project=project,
@@ -572,7 +582,7 @@ def project_cell_details(request):
     if leave_statuses:
         direct_leave_qs = direct_leave_qs.filter(leave_status__in=leave_statuses)
  
-    # Spillover — leaves filed under any OTHER project for the same members
+    # Spillover — leaves filed under any OTHER project for the same members (ALL types)
     spillover_leave_qs = LeaveApplication.objects.filter(
         user__in=members,
         start_date__lte=target_date,
@@ -592,8 +602,8 @@ def project_cell_details(request):
  
     employees_payload = []
     for emp in members:
-        direct   = leave_by_user.get(emp.id)
-        leave    = direct or spillover_by_user.get(emp.id)
+        direct    = leave_by_user.get(emp.id)
+        leave     = direct or spillover_by_user.get(emp.id)
         spillover = leave is not None and direct is None
  
         if leave is None:
@@ -605,19 +615,19 @@ def project_cell_details(request):
                 "spillover":    False,
             }
         elif leave.leave_type == "WFH" and leave.is_half_day:
-            # WFH half-day — still WFH, just partial
+            # WFH half-day — working remotely for part of the day
             entry = {
                 "user_id":          emp.id,
                 "full_name":        emp.full_name,
                 "role":             emp.role,
-                "availability":     "PARTIALLY_AVAIALABLE",
+                "availability":     "PARTIALLY_AVAILABLE",
                 "leave_type":       "WFH",
                 "is_half_day":      True,
                 "half_day_session": leave.half_day_session,
                 "spillover":        spillover,
             }
         elif leave.leave_type == "WFH":
-            # WFH full-day
+            # WFH full-day — working remotely
             entry = {
                 "user_id":      emp.id,
                 "full_name":    emp.full_name,
@@ -628,7 +638,7 @@ def project_cell_details(request):
                 "spillover":    spillover,
             }
         elif leave.is_half_day:
-            # Non-WFH half-day
+            # Non-WFH half-day (Paid, Sick, etc.)
             entry = {
                 "user_id":          emp.id,
                 "full_name":        emp.full_name,
@@ -640,6 +650,7 @@ def project_cell_details(request):
                 "spillover":        spillover,
             }
         else:
+            # Full-day non-WFH leave
             entry = {
                 "user_id":      emp.id,
                 "full_name":    emp.full_name,
@@ -651,8 +662,8 @@ def project_cell_details(request):
             }
         employees_payload.append(entry)
  
-    assigned_count  = len(member_ids)
-   # WFH employees are still working — only count actual leave and partial leave
+    assigned_count = len(member_ids)
+    # WFH does not reduce availability — only count actual absences
     on_leave_count  = sum(
         1 for e in employees_payload
         if e["availability"] not in ("AVAILABLE", "WFH")
