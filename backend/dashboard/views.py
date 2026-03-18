@@ -261,7 +261,7 @@ def dashboard_projects(request):
         project_id__in=scoped_pids,
         start_date__lte=end_date,
         end_date__gte=start_date,
-    ).exclude(leave_type="WFH")
+    )
     if leave_statuses:
         scoped_leave_qs = scoped_leave_qs.filter(leave_status__in=leave_statuses)
  
@@ -270,7 +270,7 @@ def dashboard_projects(request):
         user_id__in=all_member_ids,
         start_date__lte=end_date,
         end_date__gte=start_date,
-    ).exclude(project_id__in=scoped_pids).exclude(leave_type="WFH")
+    ).exclude(project_id__in=scoped_pids)
     if leave_statuses:
         spillover_leave_qs = spillover_leave_qs.filter(leave_status__in=leave_statuses)
  
@@ -303,7 +303,21 @@ def dashboard_projects(request):
             for l in all_leaves
             if l.project_id != project_id
         )
- 
+    
+    def get_effective_leave(uid, project_id, current_date):
+        direct = leaves_by_user_project.get((uid, project_id), [])
+        direct_leave = next(
+            (l for l in direct if l.start_date <= current_date <= l.end_date), None
+        )
+        if direct_leave:
+            return direct_leave
+        all_leaves = all_leaves_by_user.get(uid, [])
+        return next(
+            (l for l in all_leaves
+             if l.start_date <= current_date <= l.end_date
+             and l.project_id != project_id),
+            None,
+        )
     project_data = []
     for project in projects_qs:
         member_ids     = project_members.get(project.id, set())
@@ -312,14 +326,29 @@ def dashboard_projects(request):
  
         current = start_date
         while current <= end_date:
-            on_leave_count = sum(
-                1 for uid in member_ids
-                if is_on_leave(uid, project.id, current)
-            )
-            available = assigned_count - on_leave_count
+            on_leave_count = 0
+            wfh_count      = 0
+            partial_count  = 0
+
+            for uid in member_ids:
+                leave = get_effective_leave(uid, project.id, current)
+                if leave is None:
+                    continue
+                if leave.leave_type == "WFH" and leave.is_half_day:
+                    partial_count += 1
+                elif leave.leave_type == "WFH":
+                    wfh_count += 1
+                elif leave.is_half_day:
+                    partial_count += 1
+                else:
+                    on_leave_count += 1
+
+            available = assigned_count - on_leave_count - partial_count
             cells[str(current)] = {
                 "assigned_employees":  assigned_count,
                 "employees_on_leave":  on_leave_count,
+                "wfh_count":           wfh_count,
+                "partial_count":       partial_count,
                 "available_workforce": available,
                 "risk_level":          calculate_risk_level(project, assigned_count, available),
             }
