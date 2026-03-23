@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { format } from 'date-fns';
 import { fmt } from '../../utils/dateUtils';
-import { Box, Paper, Typography, IconButton, Chip, CircularProgress } from '@mui/material';
+import { Box, Paper, Typography, IconButton, Chip, CircularProgress, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { fetchEmployeeCellDetails, fetchProjectCellDetails, fetchDayDetails } from '../../services/api';
 
@@ -17,10 +17,17 @@ const LEAVE_COLORS = { Paid: '#2563eb', Unpaid: '#93c5fd', WFH: '#59be68', 'Half
 function StatusIcon({ status }) {
   if (!status) return null;
   const size = { width: 14, height: 11, borderRadius: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ml: '5px', flexShrink: 0 };
-  if (status === 'Approved') return <Box component="span" sx={{ ...size, background: '#ECFDF5', border: '1px solid #86EFAC' }}><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg></Box>;
-  if (status === 'Pending')  return <Box component="span" sx={{ ...size, background: 'transparent', border: '2px dashed #F59E0B' }} />;
-  if (status === 'Rejected') return <Box component="span" sx={{ ...size, background: '#FEF2F2', border: '1px solid #FCA5A5' }}><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg></Box>;
-  return null;
+  const tooltips = { Approved: 'Approved', Pending: 'Pending approval', Rejected: 'Rejected' };
+  let icon = null;
+  if (status === 'Approved') icon = <Box component="span" sx={{ ...size, background: '#ECFDF5', border: '1px solid #86EFAC' }}><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg></Box>;
+  if (status === 'Pending')  icon = <Box component="span" sx={{ ...size, background: 'transparent', border: '2px dashed #F59E0B' }} />;
+  if (status === 'Rejected') icon = <Box component="span" sx={{ ...size, background: '#FEF2F2', border: '1px solid #FCA5A5' }}><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg></Box>;
+  if (!icon) return null;
+  return (
+    <Tooltip title={tooltips[status] || status} placement="top" arrow>
+      <Box component="span" sx={{ display: 'inline-flex', cursor: 'default' }}>{icon}</Box>
+    </Tooltip>
+  );
 }
 
 const RISK_COLOR = { HIGH: '#dc2626', MEDIUM: '#d97706', LOW: '#16a34a' };
