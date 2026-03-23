@@ -214,12 +214,12 @@ export default function Toolbar({
           {/* Projects */}
           <Button onClick={e => { setProjAnchor(e.currentTarget); setStatusAnchor(null); setTypeAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
             <Box component="span" sx={{ display: 'inline-flex', width: 15, height: 15, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>P</Box>
-            {selectedProjectIds.length === 0 ? `All Projects (${projects.length})` : `${selectedProjectIds.length} Projects`}
+            {selectedProjectIds.length === 0 ? `Projects (${projects.length})` : `${selectedProjectIds.length} Projects`}
           </Button>
           <Menu anchorEl={projAnchor} open={Boolean(projAnchor)} onClose={() => setProjAnchor(null)} {...menuProps}
             PaperProps={{ ...menuProps.PaperProps, sx: { ...menuProps.PaperProps.sx, maxHeight: 260, overflowY: 'auto', maxWidth: 320 } }}>
             <MenuItem onClick={e => { e.stopPropagation(); onProjectsChange([]); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1 }}>
-              <Checkbox checked={selectedProjectIds.length === 0} size="small" sx={{ p: 0, accentColor: '#3b82f6' }} /> All Projects
+              <Checkbox checked={selectedProjectIds.length === 0} size="small" sx={{ p: 0, accentColor: '#3b82f6' }} /> All 
             </MenuItem>
             {projects.map(p => (
               <MenuItem key={p.project_id} onClick={e => { e.stopPropagation(); toggleArr(selectedProjectIds, p.project_id, onProjectsChange, projects.map(x => x.project_id)); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: selectedProjectIds.includes(p.project_id) ? '#f0f7ff' : 'transparent' }}>
@@ -231,11 +231,11 @@ export default function Toolbar({
           {/* Status */}
           <Button onClick={e => { setStatusAnchor(e.currentTarget); setProjAnchor(null); setTypeAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
             <FiberManualRecordIcon sx={{ fontSize: 10, color: '#16a34a' }} />
-            {activeLabel(leaveStatuses, ALL_STATUSES, 'All Statuses')}
+            {activeLabel(leaveStatuses, ALL_STATUSES, 'Status')}
           </Button>
           <Menu anchorEl={statusAnchor} open={Boolean(statusAnchor)} onClose={() => setStatusAnchor(null)} {...menuProps}>
             <MenuItem onClick={e => { e.stopPropagation(); onLeaveStatusesChange([]); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1 }}>
-              <Checkbox checked={isAllSelected(leaveStatuses, ALL_STATUSES)} size="small" sx={{ p: 0 }} /> All Statuses
+              <Checkbox checked={isAllSelected(leaveStatuses, ALL_STATUSES)} size="small" sx={{ p: 0 }} /> All
             </MenuItem>
             {ALL_STATUSES.map(st => (
               <MenuItem key={st} onClick={e => { e.stopPropagation(); toggleArr(leaveStatuses, st, onLeaveStatusesChange, ALL_STATUSES); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: leaveStatuses.includes(st) ? '#f0f7ff' : 'transparent' }}>
@@ -247,11 +247,11 @@ export default function Toolbar({
           {/* Leave Types */}
           <Button onClick={e => { setTypeAnchor(e.currentTarget); setProjAnchor(null); setStatusAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
             <FiberManualRecordIcon sx={{ fontSize: 10, color: '#2563EB' }} />
-            {activeLabel(leaveTypes, ALL_TYPES, 'All Leave Types')}
+            {activeLabel(leaveTypes, ALL_TYPES, 'Leave Types')}
           </Button>
           <Menu anchorEl={typeAnchor} open={Boolean(typeAnchor)} onClose={() => setTypeAnchor(null)} {...menuProps}>
             <MenuItem onClick={e => { e.stopPropagation(); onLeaveTypesChange([]); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1 }}>
-              <Checkbox checked={isAllSelected(leaveTypes, ALL_TYPES)} size="small" sx={{ p: 0 }} /> All Leave Types
+              <Checkbox checked={isAllSelected(leaveTypes, ALL_TYPES)} size="small" sx={{ p: 0 }} /> All
             </MenuItem>
             {ALL_TYPES.map(lt => (
               <MenuItem key={lt} onClick={e => { e.stopPropagation(); toggleArr(leaveTypes, lt, onLeaveTypesChange, ALL_TYPES); }} sx={{ borderRadius: '6px', fontSize: 13, gap: 1, background: leaveTypes.includes(lt) ? '#f0f7ff' : 'transparent' }}>
