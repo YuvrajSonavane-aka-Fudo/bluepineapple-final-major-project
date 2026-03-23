@@ -157,7 +157,7 @@ export default function SharedHeader({
       background: '#f8f9fb',
       zIndex: 20,
     }}>
-      {/* Legend toggle — absolutely pinned to right edge, no layout impact */}
+      {/* Legend toggle — desktop only; mobile uses FAB */}
       <Box
         component="button"
         onClick={onToggleLegend}
@@ -165,7 +165,7 @@ export default function SharedHeader({
           position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
           width: 22, height: 22,
           background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '50%',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', display: { xs: 'none', md: 'flex' }, alignItems: 'center', justifyContent: 'center',
           color: '#9aa0ad', p: 0, zIndex: 5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           '&:hover': { background: '#f0f2f5', color: '#5a6272' },
         }}

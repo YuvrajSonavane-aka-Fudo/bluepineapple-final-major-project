@@ -71,7 +71,6 @@ export default function DetailPanel({ context, onClose, filters }) {
     const rect = panelRef.current.getBoundingClientRect();
     const modalH = rect.height, modalW = rect.width;
 
-    // Mobile: center horizontally, position vertically centered
     if (vw < 900) {
       const left = Math.max(GAP, (vw - modalW) / 2);
       const top  = Math.max(GAP, (vh - modalH) / 2);
@@ -123,35 +122,64 @@ export default function DetailPanel({ context, onClose, filters }) {
   if (isMobileView) {
     return (
       <>
-        {/* Backdrop */}
-        <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.4)' }} />
-        {/* Sheet */}
+        <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.45)' }} />
         <Box
           onClick={e => e.stopPropagation()}
           sx={{
             position: 'fixed', bottom: 0, left: 0, right: 0,
-            zIndex: 201,
+            zIndex: 501,
             background: '#fff',
-            borderRadius: '16px 16px 0 0',
-            boxShadow: '0 -4px 24px rgba(0,0,0,0.18)',
+            borderRadius: '20px 20px 0 0',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.22)',
             display: 'flex', flexDirection: 'column',
-            maxHeight: '70vh',
+            maxHeight: '75vh',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            animation: 'slideUp 0.28s cubic-bezier(0.4,0,0.2,1)',
+            '@keyframes slideUp': {
+              from: { transform: 'translateY(100%)' },
+              to:   { transform: 'translateY(0)' },
+            },
           }}
         >
-          {/* Drag handle */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1, pb: 0.5, flexShrink: 0 }}>
-            <Box sx={{ width: 36, height: 4, borderRadius: 99, background: '#e0e0e0' }} />
+          <Box
+            onClick={onClose}
+            sx={{ display: 'flex', justifyContent: 'center', pt: 1.25, pb: 0.75, flexShrink: 0, cursor: 'pointer' }}
+          >
+            <Box sx={{ width: 40, height: 4, borderRadius: 99, background: '#dde0e6' }} />
           </Box>
-          {/* Header */}
-          <Box sx={{ px: 2, py: 1, borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#1a1f2e' }}>{titles[type]}</Typography>
+
+          <Box sx={{
+            px: 2, pb: 1.25, pt: 0.25, flexShrink: 0,
+            borderBottom: '1px solid #f0f2f5',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+          }}>
+            <Box>
+              <Box sx={{
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                background: type === 'employee' ? '#eef2ff' : type === 'project' ? '#f0fdf4' : '#fefce8',
+                border: `1px solid ${type === 'employee' ? '#c7d2fe' : type === 'project' ? '#86efac' : '#fde68a'}`,
+                borderRadius: '4px', px: '6px', py: '2px', mb: 0.5,
+              }}>
+                <Typography sx={{ fontSize: 10, fontWeight: 700, color: type === 'employee' ? '#4338ca' : type === 'project' ? '#16a34a' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  {type}
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: 14, fontWeight: 700, color: '#1a1f2e', lineHeight: 1.3 }}>
+                {titles[type]}
+              </Typography>
+            </Box>
             <Box component="button" onClick={onClose}
-              sx={{ width: 24, height: 24, borderRadius: '50%', background: '#f0f2f5', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 0 }}>
-              <CloseIcon sx={{ fontSize: 13, color: '#5a6272' }} />
+              sx={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0, ml: 1,
+                background: '#f3f4f6', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', p: 0,
+                '&:active': { background: '#e5e7eb' },
+              }}>
+              <CloseIcon sx={{ fontSize: 15, color: '#6b7280' }} />
             </Box>
           </Box>
-          {/* Scrollable content */}
-          <Box sx={{ overflowY: 'auto', p: '8px 14px 20px', flex: 1, minHeight: 0 }}>
+
+          <Box sx={{ overflowY: 'auto', px: 2, pt: 1, pb: 3, flex: 1, minHeight: 0 }}>
             {content}
           </Box>
         </Box>
@@ -200,6 +228,22 @@ function SectionLabel({ children }) {
 
 function Row({ children }) {
   return <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1, py: 0.75, borderRadius: '6px', background: '#f8f9fb', border: '1px solid #eef0f3', mb: '3px' }}>{children}</Box>;
+}
+
+// WFH row — same base as Row but with left green accent border (V3 style)
+function WFHRow({ children }) {
+  return (
+    <Box sx={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      px: 1, py: 0.75, borderRadius: '6px',
+      background: '#f8f9fb',
+      border: '1px solid #eef0f3',
+      borderLeft: '2px solid #1D9E75',
+      mb: '3px',
+    }}>
+      {children}
+    </Box>
+  );
 }
 
 function Avail({ hasLeave, isHalfDay, leaveType }) {
@@ -257,12 +301,10 @@ function ProjectView({ data }) {
   const emps = data?.employees || [];
   const project = data?.project || {};
 
-  // Use backend values instead of recalculating
   const total        = project.assigned_employees ?? emps.length;
   const onLeave      = project.on_leave_count ?? 0;
   const available    = project.available_workforce ?? 0;
 
-  // Frontend-only grouping for display
   const partialOut = emps.filter(e => e?.is_half_day);
   const wfhOnly    = emps.filter(e => e?.leave_type === 'WFH');
   const fullyOut   = emps.filter(e => e?.leave_type && e?.leave_type !== 'WFH' && !e?.is_half_day);
@@ -292,7 +334,6 @@ function ProjectView({ data }) {
                   <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>
                     {emp.full_name}
                   </Typography>
-
                   <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
                     <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
                     <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
@@ -301,7 +342,6 @@ function ProjectView({ data }) {
                     </Typography>
                   </Box>
                 </Box>
-
                 <Avail
                   hasLeave={!!emp.leave_type}
                   isHalfDay={emp.is_half_day}
@@ -315,62 +355,130 @@ function ProjectView({ data }) {
 }
 
 function DayView({ data }) {
-  const emps        = data?.employees_on_leave || [];
+  const allEmps     = data?.employees_on_leave || [];
   const projects    = (data?.projects || []).filter(p => p.employees_on_leave > 0);
   const dateMeta    = data?.date || {};
   const holidayName = dateMeta.is_public_holiday ? dateMeta.holiday_name : null;
 
+  // Split employees into actual leave vs WFH using the availability field from backend
+  const onLeaveEmps = allEmps.filter(e => e.availability !== 'WFH');
+  const wfhEmps     = allEmps.filter(e => e.availability === 'WFH');
+
+  const SCROLL_COL = {
+    overflowY: 'auto',
+    maxHeight: 220,
+    flex: 1,
+    minHeight: 0,
+    pr: '2px',
+    '&::-webkit-scrollbar': { width: '3px' },
+    '&::-webkit-scrollbar-track': { background: 'transparent' },
+    '&::-webkit-scrollbar-thumb': { background: '#dde0e6', borderRadius: '99px' },
+  };
+
+  // SectionLabel needs to be sticky inside the scroll column
+  const STICKY_LABEL = {
+    fontSize: 9, fontWeight: 700, color: '#b0b6c3',
+    letterSpacing: '0.7px', textTransform: 'uppercase',
+    mt: 1, mb: 0.5,
+    position: 'sticky', top: 0,
+    background: '#fff',
+    zIndex: 1,
+    pt: '2px',
+  };
+
   return (
     <>
       {holidayName && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1, py: 0.6, mb: 0.75, background: '#fefce8', border: '1px solid #fde68a', borderRadius: '6px', fontSize: 11, color: '#92400e', fontWeight: 600 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1, py: 0.6, mb: 0.75, background: '#fefce8', border: '1px solid #fde68a', borderRadius: '6px' }}>
           <span>🏖️</span>
           <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#92400e' }}>{holidayName}</Typography>
           <Typography sx={{ fontSize: 11, fontWeight: 400, color: '#a16207', ml: 0.25 }}>· Public Holiday</Typography>
         </Box>
       )}
+
       <Box sx={{ display: 'flex', minHeight: 0 }}>
-        <Box sx={{ flex: 1, overflowY: 'auto', maxHeight: 320 }}>
-          <SectionLabel>ON LEAVE ({emps.length})</SectionLabel>
-          {emps.length === 0
-            ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>None.</Typography>
-            : emps.map(emp => (
-                <Row key={emp.user_id}>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{emp.full_name}</Typography>
-                    {emp.leave_type && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
-                        <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                        <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
-                          {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
+
+        {/* ── Left column: On Leave + WFH ── */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <Box sx={SCROLL_COL}>
+
+            {/* On Leave section */}
+            <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>
+              ON LEAVE ({onLeaveEmps.length})
+            </Typography>
+
+            {onLeaveEmps.length === 0
+              ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>None.</Typography>
+              : onLeaveEmps.map(emp => (
+                  <Row key={emp.user_id}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{emp.full_name}</Typography>
+                      {emp.leave_type && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
+                          <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
+                          <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
+                            {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                    <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} leaveType={emp.leave_type} />
+                  </Row>
+                ))
+            }
+
+            {/* WFH section — only shown if there are WFH employees */}
+            {wfhEmps.length > 0 && (
+              <>
+                <Box sx={{ height: '0.5px', background: '#eef0f3', my: '6px' }} />
+                <Typography sx={STICKY_LABEL}>
+                  WFH ({wfhEmps.length})
+                </Typography>
+                {wfhEmps.map(emp => (
+                  <WFHRow key={emp.user_id}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{emp.full_name}</Typography>
+                      <Typography sx={{ fontSize: 10, color: '#9aa0ad', mt: '2px' }}>Working remotely</Typography>
+                    </Box>
+                    <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#059669' }}>WFH</Typography>
+                  </WFHRow>
+                ))}
+              </>
+            )}
+
+          </Box>
+        </Box>
+
+        {/* Column divider */}
+        <Box sx={{ background: '#f0f2f5', mx: 1, my: '1px', width: '1px', flexShrink: 0 }} />
+
+        {/* ── Right column: Affected projects (real absences only) ── */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <Box sx={SCROLL_COL}>
+            <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>
+              AFFECTED ({projects.length})
+            </Typography>
+
+            {projects.length === 0
+              ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>None.</Typography>
+              : projects.map(p => {
+                  const risk = p.risk_level || 'LOW';
+                  return (
+                    <Row key={p.project_id}>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{p.project_name}</Typography>
+                        <Typography sx={{ fontSize: 10, color: '#9aa0ad', mt: '2px' }}>
+                          {p.employees_on_leave} of {p.assigned_employees} on leave
                         </Typography>
                       </Box>
-                    )}
-                  </Box>
-                  <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} leaveType={emp.leave_type} />
-                </Row>
-              ))
-          }
+                      <RiskTag risk={risk} />
+                    </Row>
+                  );
+                })
+            }
+          </Box>
         </Box>
-        <Box sx={{ background: '#f0f2f5', mx: 1, my: '1px' }} />
-        <Box sx={{ flex: 1, overflowY: 'auto', maxHeight: 320 }}>
-          <SectionLabel>AFFECTED ({projects.length})</SectionLabel>
-          {projects.length === 0
-            ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>None.</Typography>
-            : projects.map(p => {
-                const risk = p.risk_level || 'LOW';
-                return (
-                  <Row key={p.project_id}>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{p.project_name}</Typography>
-                      <Typography sx={{ fontSize: 10, color: '#9aa0ad', mt: '2px' }}>{p.employees_on_leave} on leave of {p.assigned_employees}</Typography>
-                    </Box>
-                    <RiskTag risk={risk} />
-                  </Row>
-                );
-              })
-          }
-        </Box>
+
       </Box>
     </>
   );

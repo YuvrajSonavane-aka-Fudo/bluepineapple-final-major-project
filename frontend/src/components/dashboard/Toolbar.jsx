@@ -15,6 +15,19 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LogoutIcon from '@mui/icons-material/Logout';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+
+// ── Validation ───────────────────────────────────────────────────────────────
+// Returns an error message string if invalid, null if valid.
+function validateRange(start, end) {
+  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return 'Please enter valid dates for both start and end.';
+  }
+  if (end < start) {
+    return 'End date must be on or after the start date.';
+  }
+  return null;
+}
 
 export default function Toolbar({
   startDate, endDate, onRangeChange,
@@ -28,6 +41,10 @@ export default function Toolbar({
   const [statusAnchor, setStatusAnchor] = useState(null);
   const [typeAnchor,   setTypeAnchor]   = useState(null);
   const [showLogout,   setShowLogout]   = useState(false);
+
+  // Date validation dialog state
+  const [dateError,    setDateError]    = useState(null); // null = closed, string = message
+
   const startInputRef = useRef(null);
   const endInputRef   = useRef(null);
 
@@ -45,24 +62,33 @@ export default function Toolbar({
 
   const activeFilter = getActiveFilter();
   const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'MMM dd, yyyy');
+
   const toggleArr = (arr, val, setter, allValues) => {
     const next = arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
-    // if all selected or none selected, treat as "all" (empty = all)
     setter(next.length === allValues.length ? [] : next);
   };
 
-  // empty array = all selected
   const isAllSelected = (arr, allValues) => arr.length === 0 || arr.length === allValues.length;
-  const activeLabel = (arr, allValues, allLabel, singleSuffix) => {
+  const activeLabel = (arr, allValues, allLabel) => {
     if (isAllSelected(arr, allValues)) return allLabel;
     return arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
   };
 
+  // ── Safe range change — validates before calling onRangeChange ────────────
+  const handleRangeChange = (newStart, newEnd) => {
+    const err = validateRange(newStart, newEnd);
+    if (err) {
+      setDateError(err);
+      return;
+    }
+    onRangeChange(newStart, newEnd);
+  };
+
   const QUICK = [
-    { label: 'T', tooltip: 'Today', fn: () => { const r = getTodayRange(); onRangeChange(r.start, r.end); } },
-    { label: 'W', tooltip: 'Week',  fn: () => { const r = getWeekRange();  onRangeChange(r.start, r.end); } },
-    { label: 'M', tooltip: 'Month', fn: () => { const r = getMonthRange(); onRangeChange(r.start, r.end); } },
-    { label: 'Y', tooltip: 'Year',  fn: () => { const r = getYearRange();  onRangeChange(r.start, r.end); } },
+    { label: 'T', tooltip: 'Today', fn: () => { const r = getTodayRange(); handleRangeChange(r.start, r.end); } },
+    { label: 'W', tooltip: 'Week',  fn: () => { const r = getWeekRange();  handleRangeChange(r.start, r.end); } },
+    { label: 'M', tooltip: 'Month', fn: () => { const r = getMonthRange(); handleRangeChange(r.start, r.end); } },
+    { label: 'Y', tooltip: 'Year',  fn: () => { const r = getYearRange();  handleRangeChange(r.start, r.end); } },
   ];
 
   const btnSx = {
@@ -111,15 +137,37 @@ export default function Toolbar({
             Filters:
           </Typography>
 
-          <IconButton onClick={() => { const r = shiftRange(startDate, endDate, 'back'); onRangeChange(r.start, r.end); }} sx={{ ...iconBtnSx, width: 26, height: 26 }}>
+          <IconButton
+            onClick={() => {
+              const r = shiftRange(startDate, endDate, 'back');
+              handleRangeChange(r.start, r.end);
+            }}
+            sx={{ ...iconBtnSx, width: 26, height: 26 }}
+          >
             <ChevronLeftIcon sx={{ fontSize: 14 }} />
           </IconButton>
 
           {/* Date range */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '7px', px: 1, py: 0.4 }}>
             {[
-              { ref: startInputRef, val: fmt(startDate), display: fmtDisplay(startDate), onChange: (v) => { const d = new Date(v); if (!isNaN(d) && d <= endDate) onRangeChange(d, endDate); } },
-              { ref: endInputRef,   val: fmt(endDate),   display: fmtDisplay(endDate),   onChange: (v) => { const d = new Date(v); if (!isNaN(d) && d >= startDate) onRangeChange(startDate, d); } },
+              {
+                ref: startInputRef,
+                val: fmt(startDate),
+                display: fmtDisplay(startDate),
+                onChange: (v) => {
+                  const d = new Date(v);
+                  if (!isNaN(d)) handleRangeChange(d, endDate);
+                },
+              },
+              {
+                ref: endInputRef,
+                val: fmt(endDate),
+                display: fmtDisplay(endDate),
+                onChange: (v) => {
+                  const d = new Date(v);
+                  if (!isNaN(d)) handleRangeChange(startDate, d);
+                },
+              },
             ].map((item, i) => (
               <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 {i > 0 && <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, pb: '2px' }}>—</Typography>}
@@ -128,13 +176,25 @@ export default function Toolbar({
                   <IconButton size="small" sx={{ p: 0, color: 'rgba(255,255,255,0.7)' }} onClick={() => item.ref.current?.showPicker?.() || item.ref.current?.click()}>
                     <CalendarTodayIcon sx={{ fontSize: 13 }} />
                   </IconButton>
-                  <input ref={item.ref} type="date" value={item.val} onChange={e => item.onChange(e.target.value)} style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
+                  <input
+                    ref={item.ref}
+                    type="date"
+                    value={item.val}
+                    onChange={e => item.onChange(e.target.value)}
+                    style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
+                  />
                 </Box>
               </Box>
             ))}
           </Box>
 
-          <IconButton onClick={() => { const r = shiftRange(startDate, endDate, 'forward'); onRangeChange(r.start, r.end); }} sx={{ ...iconBtnSx, width: 26, height: 26 }}>
+          <IconButton
+            onClick={() => {
+              const r = shiftRange(startDate, endDate, 'forward');
+              handleRangeChange(r.start, r.end);
+            }}
+            sx={{ ...iconBtnSx, width: 26, height: 26 }}
+          >
             <ChevronRightIcon sx={{ fontSize: 14 }} />
           </IconButton>
 
@@ -223,7 +283,44 @@ export default function Toolbar({
         </Box>
       </Box>
 
-      {/* Logout dialog */}
+      {/* ── Date validation error dialog ─────────────────────────────────── */}
+      <Dialog
+        open={Boolean(dateError)}
+        onClose={() => setDateError(null)}
+        PaperProps={{ sx: { borderRadius: '16px', p: '8px', width: 300 } }}
+      >
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, pt: 3 }}>
+          <Box sx={{
+            width: 54, height: 54, borderRadius: '50%',
+            background: '#fef2f2', border: '1.5px solid #fca5a5',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1,
+          }}>
+            <ErrorOutlineIcon sx={{ fontSize: 26, color: '#dc2626' }} />
+          </Box>
+          <Typography sx={{ fontSize: 18, fontWeight: 700, color: '#111827', letterSpacing: '-0.3px' }}>
+            Invalid date range
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 1.55, mt: 0.5 }}>
+            {dateError}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+          <Button
+            onClick={() => setDateError(null)}
+            fullWidth
+            variant="contained"
+            sx={{
+              borderRadius: '9px', background: '#1e2d5a',
+              fontSize: 13, fontWeight: 600, textTransform: 'none', py: 1.25,
+              '&:hover': { background: '#162347' },
+            }}
+          >
+            Fix it
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Logout dialog ────────────────────────────────────────────────── */}
       <Dialog open={showLogout} onClose={() => setShowLogout(false)} PaperProps={{ sx: { borderRadius: '16px', p: '8px', width: 300 } }}>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, pt: 3 }}>
           <Box sx={{ width: 54, height: 54, borderRadius: '50%', background: '#fff5f0', border: '1.5px solid #fcd9c8', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>

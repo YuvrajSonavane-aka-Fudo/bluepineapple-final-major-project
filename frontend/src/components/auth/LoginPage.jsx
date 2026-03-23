@@ -1,11 +1,12 @@
 // src/components/auth/LoginPage.jsx
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { Box, TextField, Button, Typography, CircularProgress } from '@mui/material';
+import { Box, TextField, Button, Typography, CircularProgress, useMediaQuery } from '@mui/material';
 import LockIcon from '@mui/icons-material/Lock';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const isMobile = useMediaQuery('(max-width:768px)');
   const [email,   setEmail]   = useState('');
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
@@ -34,7 +35,9 @@ export default function LoginPage() {
 
   return (
     <Box sx={{
-      display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden',
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      width: '100vw', height: '100vh', overflow: isMobile ? 'auto' : 'hidden',
       background: '#0d1425', position: 'relative',
     }}>
 
@@ -52,93 +55,120 @@ export default function LoginPage() {
       <Box sx={{ position: 'absolute', top: '-10%', left: '15%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,91,219,0.15) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }} />
       <Box sx={{ position: 'absolute', bottom: '-10%', right: '5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,179,237,0.08) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }} />
 
-      {/* ── LEFT PANEL ── */}
-      <Box sx={{ flex: '0 0 48%', height: '100vh', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 8 }}>
-        <Box sx={{ maxWidth: 460, width: '100%', display: 'flex', flexDirection: 'column', gap: 4.5 }}>
+      {/* ── LEFT PANEL — hidden on mobile ── */}
+      {!isMobile && (
+        <Box sx={{ flex: '0 0 48%', height: '100vh', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 8 }}>
+          <Box sx={{ maxWidth: 460, width: '100%', display: 'flex', flexDirection: 'column', gap: 4.5 }}>
 
-          {/* Brand */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ...fadeUp(0) }}>
-            <Box sx={{ width: 40, height: 40, background: 'linear-gradient(135deg, #3b5bdb, #63b3ed)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 24px rgba(59,91,219,0.5)' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <rect x="3"  y="3"  width="8" height="8" rx="2" fill="white"/>
-                <rect x="13" y="3"  width="8" height="8" rx="2" fill="white" opacity="0.6"/>
-                <rect x="3"  y="13" width="8" height="8" rx="2" fill="white" opacity="0.6"/>
-                <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.85"/>
-              </svg>
+            {/* Brand */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ...fadeUp(0) }}>
+              <Box sx={{ width: 40, height: 40, background: 'linear-gradient(135deg, #3b5bdb, #63b3ed)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 24px rgba(59,91,219,0.5)' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <rect x="3"  y="3"  width="8" height="8" rx="2" fill="white"/>
+                  <rect x="13" y="3"  width="8" height="8" rx="2" fill="white" opacity="0.6"/>
+                  <rect x="3"  y="13" width="8" height="8" rx="2" fill="white" opacity="0.6"/>
+                  <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.85"/>
+                </svg>
+              </Box>
+              <Typography sx={{ fontWeight: 700, fontSize: 15, color: '#e8edf5', letterSpacing: '-0.3px' }}>Leave Impact Dashboard</Typography>
             </Box>
-            <Typography sx={{ fontWeight: 700, fontSize: 15, color: '#e8edf5', letterSpacing: '-0.3px' }}>Leave Impact Dashboard</Typography>
-          </Box>
 
-          {/* Headline */}
-          <Box sx={fadeUp(0.1)}>
-            <Typography sx={{ fontSize: 46, fontWeight: 800, color: '#ffffff', letterSpacing: '-1.5px', lineHeight: 1.08, mb: 2 }}>
-              Know your team's{' '}
-              <Box component="span" sx={{ background: 'linear-gradient(90deg, #63b3ed 0%, #3b5bdb 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                availability.
-              </Box>
-            </Typography>
-            <Typography sx={{ fontSize: 15, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7, maxWidth: 360 }}>
-              Real-time leave impact monitoring and workforce risk forecasting for enterprise teams.
-            </Typography>
-          </Box>
+            {/* Headline */}
+            <Box sx={fadeUp(0.1)}>
+              <Typography sx={{ fontSize: 46, fontWeight: 800, color: '#ffffff', letterSpacing: '-1.5px', lineHeight: 1.08, mb: 2 }}>
+                Know your team's{' '}
+                <Box component="span" sx={{ background: 'linear-gradient(90deg, #63b3ed 0%, #3b5bdb 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  availability.
+                </Box>
+              </Typography>
+              <Typography sx={{ fontSize: 15, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7, maxWidth: 360 }}>
+                Real-time leave impact monitoring and workforce risk forecasting for enterprise teams.
+              </Typography>
+            </Box>
 
-          {/* Stat cards */}
-          <Box sx={{ display: 'flex', gap: 1.5, ...fadeUp(0.2) }}>
-            {[
-              { val: 'Real-time', label: 'Leave tracking' },
-              { val: 'Per-project', label: 'Risk analysis' },
-              { val: 'Role-based', label: 'Access control' },
-            ].map(({ val, label }) => (
-              <Box key={label} sx={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', p: '14px 16px' }}>
-                <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#63b3ed', mb: 0.3 }}>{val}</Typography>
-                <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{label}</Typography>
-              </Box>
-            ))}
-          </Box>
-
-          {/* Dashboard preview */}
-          <Box sx={fadeUp(0.3)}>
-            <Box sx={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', p: 2.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Box sx={{ width: 80, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }} />
-                <Box sx={{ width: 50, height: 5, borderRadius: 99, background: 'rgba(99,179,237,0.25)' }} />
-                <Box sx={{ ml: 'auto', width: 40, height: 5, borderRadius: 99, background: 'rgba(59,91,219,0.3)' }} />
-              </Box>
+            {/* Stat cards */}
+            <Box sx={{ display: 'flex', gap: 1.5, ...fadeUp(0.2) }}>
               {[
-                { w: '40%', cells: [1,1,0,1,1,0,0,1,1,0,1], color: 'rgba(59,91,219,0.65)' },
-                { w: '54%', cells: [0,1,1,1,0,0,1,0,1,1,0], color: 'rgba(99,179,237,0.55)' },
-                { w: '35%', cells: [1,0,0,1,1,1,0,1,0,0,1], color: 'rgba(89,190,104,0.55)' },
-                { w: '50%', cells: [0,0,1,0,1,1,1,0,0,1,1], color: 'rgba(59,91,219,0.45)' },
-              ].map((row, ri) => (
-                <Box key={ri} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: ri < 3 ? 1 : 0 }}>
-                  <Box sx={{ width: row.w, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />
-                  <Box sx={{ display: 'flex', gap: '2px', ml: 'auto' }}>
-                    {row.cells.map((filled, ci) => (
-                      <Box key={ci} sx={{ width: 16, height: 22, borderRadius: '3px', background: filled ? row.color : 'rgba(255,255,255,0.04)' }} />
-                    ))}
-                  </Box>
+                { val: 'Real-time', label: 'Leave tracking' },
+                { val: 'Per-project', label: 'Risk analysis' },
+                { val: 'Role-based', label: 'Access control' },
+              ].map(({ val, label }) => (
+                <Box key={label} sx={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', p: '14px 16px' }}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#63b3ed', mb: 0.3 }}>{val}</Typography>
+                  <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{label}</Typography>
                 </Box>
               ))}
             </Box>
+
+            {/* Dashboard preview */}
+            <Box sx={fadeUp(0.3)}>
+              <Box sx={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', p: 2.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Box sx={{ width: 80, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }} />
+                  <Box sx={{ width: 50, height: 5, borderRadius: 99, background: 'rgba(99,179,237,0.25)' }} />
+                  <Box sx={{ ml: 'auto', width: 40, height: 5, borderRadius: 99, background: 'rgba(59,91,219,0.3)' }} />
+                </Box>
+                {[
+                  { w: '40%', cells: [1,1,0,1,1,0,0,1,1,0,1], color: 'rgba(59,91,219,0.65)' },
+                  { w: '54%', cells: [0,1,1,1,0,0,1,0,1,1,0], color: 'rgba(99,179,237,0.55)' },
+                  { w: '35%', cells: [1,0,0,1,1,1,0,1,0,0,1], color: 'rgba(89,190,104,0.55)' },
+                  { w: '50%', cells: [0,0,1,0,1,1,1,0,0,1,1], color: 'rgba(59,91,219,0.45)' },
+                ].map((row, ri) => (
+                  <Box key={ri} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: ri < 3 ? 1 : 0 }}>
+                    <Box sx={{ width: row.w, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />
+                    <Box sx={{ display: 'flex', gap: '2px', ml: 'auto' }}>
+                      {row.cells.map((filled, ci) => (
+                        <Box key={ci} sx={{ width: 16, height: 22, borderRadius: '3px', background: filled ? row.color : 'rgba(255,255,255,0.04)' }} />
+                      ))}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
           </Box>
         </Box>
-      </Box>
+      )}
 
+      {/* ── RIGHT PANEL / Mobile full screen ── */}
+      <Box sx={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: isMobile ? 3 : 6,
+        zIndex: 1,
+        // On mobile: min full screen height so it fills properly
+        minHeight: isMobile ? '100vh' : 'unset',
+      }}>
+        <Box sx={{ width: '100%', maxWidth: isMobile ? '100%' : 500, ...fadeUp(0.15) }}>
 
-      {/* ── RIGHT PANEL ── */}
-      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 6, zIndex: 1 }}>
-        <Box sx={{ width: '100%', maxWidth: 500, ...fadeUp(0.15) }}>
+          {/* Mobile-only brand header */}
+          {isMobile && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mb: 4 }}>
+              <Box sx={{ width: 36, height: 36, background: 'linear-gradient(135deg, #3b5bdb, #63b3ed)', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(59,91,219,0.5)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect x="3"  y="3"  width="8" height="8" rx="2" fill="white"/>
+                  <rect x="13" y="3"  width="8" height="8" rx="2" fill="white" opacity="0.6"/>
+                  <rect x="3"  y="13" width="8" height="8" rx="2" fill="white" opacity="0.6"/>
+                  <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.85"/>
+                </svg>
+              </Box>
+              <Typography sx={{ fontWeight: 700, fontSize: 15, color: '#e8edf5', letterSpacing: '-0.3px' }}>
+                Leave Impact Dashboard
+              </Typography>
+            </Box>
+          )}
 
           {/* Glass card */}
           <Box sx={{
             background: 'rgba(255,255,255,0.05)',
             backdropFilter: 'blur(24px)',
             border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '22px',
-            p: '50px 45px',
+            borderRadius: isMobile ? '18px' : '22px',
+            p: isMobile ? '32px 24px' : '50px 45px',
             boxShadow: '0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}>
-            <Typography sx={{ fontSize: 28, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.6px', mb: 0.75 }}>
+            <Typography sx={{ fontSize: isMobile ? 24 : 28, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.6px', mb: 0.75 }}>
               Welcome back
             </Typography>
             <Typography sx={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', mb: 3.5, lineHeight: 1.55 }}>
@@ -183,7 +213,7 @@ export default function LoginPage() {
                 fullWidth
                 variant="contained"
                 sx={{
-                  mt: 0.5, py: 1.5, borderRadius: '10px',
+                  mt: 0.5, py: isMobile ? 1.75 : 1.5, borderRadius: '10px',
                   background: 'linear-gradient(135deg, #3b5bdb 0%, #63b3ed 100%)',
                   fontSize: 14, fontWeight: 700, textTransform: 'none', letterSpacing: '-0.1px',
                   boxShadow: '0 4px 20px rgba(59,91,219,0.45)',

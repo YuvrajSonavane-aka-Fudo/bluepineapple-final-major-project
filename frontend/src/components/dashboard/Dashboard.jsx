@@ -36,7 +36,7 @@ export default function Dashboard() {
   const [legendVisible,   setLegendVisible]   = useState(false);
 
   const containerRef = useRef(null);
-  const [empHeight, setEmpHeight] = useState(null);
+  const empHeightRef = useRef(null); // px value — written directly to DOM, no setState
   const legendRef = useRef(null);   // ref on the legend panel itself
 
   const empScrollRef    = useRef(null);
@@ -66,8 +66,10 @@ export default function Dashboard() {
   const handleResize = useCallback((clientY) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const px = clientY - rect.top;
-    setEmpHeight(Math.max(120, Math.min(rect.height - 120, px)));
+    const px = Math.max(120, Math.min(rect.height - 120, clientY - rect.top));
+    empHeightRef.current = px;
+    // Write directly to the DOM — zero React re-renders during drag
+    containerRef.current.style.setProperty('--emp-height', `${px}px`);
   }, []);
 
   useEffect(() => {
@@ -210,7 +212,7 @@ export default function Dashboard() {
               onToggleLegend={() => setLegendVisible(v => !v)}
             />
 
-            <Box sx={{ height: empHeight ?? '50%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ height: 'var(--emp-height, 50%)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <EmployeePanel
                 dateStrip={filteredDateStrip}
                 employees={empData.employees || []}
@@ -242,9 +244,33 @@ export default function Dashboard() {
             </Box>
           </Box>
 
-          {/* ── Mobile Legend: bottom sheet ── */}
+          {/* ── Mobile Legend: FAB + bottom sheet ── */}
           {isMobile && (
             <>
+              {/* FAB — bottom right, opens legend sheet */}
+              <Box
+                component="button"
+                onClick={() => setLegendVisible(v => !v)}
+                sx={{
+                  position: 'fixed', bottom: 24, right: 20, zIndex: 402,
+                  width: 48, height: 48, borderRadius: '50%',
+                  background: legendVisible ? '#374151' : '#1e2d5a',
+                  border: 'none', cursor: 'pointer',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background 0.2s ease, transform 0.2s ease',
+                  transform: legendVisible ? 'rotate(180deg)' : 'rotate(0deg)',
+                  '&:active': { transform: legendVisible ? 'rotate(180deg) scale(0.92)' : 'scale(0.92)' },
+                }}
+              >
+                {/* Layers/legend icon */}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                  <polyline points="2 17 12 22 22 17"/>
+                  <polyline points="2 12 12 17 22 12"/>
+                </svg>
+              </Box>
+
               {/* Backdrop */}
               {legendVisible && (
                 <Box
@@ -252,30 +278,36 @@ export default function Dashboard() {
                   sx={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.35)' }}
                 />
               )}
-              {/* Sheet */}
+
+              {/* Bottom sheet */}
               <Box sx={{
                 position: 'fixed', bottom: 0, left: 0, right: 0,
                 zIndex: 401,
                 background: '#fff',
-                borderRadius: '16px 16px 0 0',
+                borderRadius: '20px 20px 0 0',
                 boxShadow: '0 -4px 24px rgba(0,0,0,0.15)',
-                height: '60vh',
+                height: '62vh',
                 display: 'flex', flexDirection: 'column',
                 transform: legendVisible ? 'translateY(0)' : 'translateY(100%)',
                 transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+                paddingBottom: 'env(safe-area-inset-bottom)',
               }}>
-                {/* Drag handle — tap to close */}
+                {/* Drag handle */}
                 <Box
                   onClick={() => setLegendVisible(false)}
                   sx={{ display: 'flex', justifyContent: 'center', pt: 1.25, pb: 0.5, flexShrink: 0, cursor: 'pointer' }}
                 >
-                  <Box sx={{ width: 36, height: 4, borderRadius: 99, background: '#e0e0e0' }} />
+                  <Box sx={{ width: 40, height: 4, borderRadius: 99, background: '#dde0e6' }} />
                 </Box>
-                {/* Title */}
-                <Box sx={{ px: 2, pb: 1, flexShrink: 0 }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#1a1f2e' }}>Legend & Settings</Typography>
+                {/* Header */}
+                <Box sx={{ px: 2, pb: 1, pt: 0.5, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: 15, fontWeight: 700, color: '#1a1f2e' }}>Legend & Settings</Typography>
+                  <Box component="button" onClick={() => setLegendVisible(false)}
+                    sx={{ width: 28, height: 28, borderRadius: '50%', background: '#f3f4f6', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 0 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </Box>
                 </Box>
-                {/* Scrollable legend content */}
+                {/* Scrollable content */}
                 <Box sx={{ flex: 1, overflowY: 'auto' }}>
                   <Legend
                     showAll={showAll}           onShowAllChange={setShowAll}
@@ -328,7 +360,7 @@ export default function Dashboard() {
             onToggleLegend={() => setLegendVisible(v => !v)}
           />
 
-          <Box sx={{ height: empHeight ?? '50%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ height: 'var(--emp-height, 50%)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <EmployeePanel
               dateStrip={filteredDateStrip}
               employees={empData.employees || []}
