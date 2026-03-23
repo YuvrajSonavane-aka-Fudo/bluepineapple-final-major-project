@@ -12,7 +12,6 @@ import ChevronLeftIcon           from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon          from '@mui/icons-material/ChevronRight';
 import KeyboardArrowDownIcon     from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon       from '@mui/icons-material/KeyboardArrowUp';
-import CalendarTodayIcon         from '@mui/icons-material/CalendarToday';
 import LogoutIcon                from '@mui/icons-material/Logout';
 import CachedOutlinedIcon        from '@mui/icons-material/CachedOutlined';
 import FilterAltOffOutlinedIcon  from '@mui/icons-material/FilterAltOffOutlined';
@@ -186,31 +185,40 @@ export default function MobileToolbar({
           <ChevronLeftIcon sx={{ fontSize: 16 }} />
         </Box>
 
-        {/* Date range pill */}
+        {/* Date range pill — tap start or end date to open picker */}
         <Box sx={{
-          flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px',
+          flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
           background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.18)',
-          borderRadius: '7px', px: '4px', height: 26, boxSizing: 'border-box',
+          borderRadius: '7px', px: '6px', height: 26, boxSizing: 'border-box',
           overflow: 'hidden',
         }}>
           {[
             { ref: startInputRef, val: fmt(startDate), display: fmtDisplay(startDate), onChange: (v) => { const d = new Date(v); if (!isNaN(d) && d <= endDate) onRangeChange(d, endDate); } },
             { ref: endInputRef,   val: fmt(endDate),   display: fmtDisplay(endDate),   onChange: (v) => { const d = new Date(v); if (!isNaN(d) && d >= startDate) onRangeChange(startDate, d); } },
           ].map((item, i) => (
-            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '1px', minWidth: 0, flexShrink: 1 }}>
-              {i > 0 && <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, flexShrink: 0, px: '1px' }}>—</Typography>}
-              <Typography sx={{ color: '#fff', fontSize: 10, fontFamily: "'DM Mono', monospace", whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
-                {item.display}
-              </Typography>
+            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 1, minWidth: 0, position: 'relative' }}>
+              {i > 0 && <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, flexShrink: 0, mx: '1px' }}>—</Typography>}
+              {/* Clickable date text opens the native date picker */}
               <Box
                 component="button"
                 onClick={() => item.ref.current?.showPicker?.() || item.ref.current?.click()}
-                sx={{ p: 0, ml: '1px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                sx={{
+                  p: 0, background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#fff', fontSize: 10, fontFamily: "'DM Mono', monospace",
+                  whiteSpace: 'nowrap', letterSpacing: '-0.2px',
+                  textDecoration: 'none',
+                  '&:active': { opacity: 0.7 },
+                }}
               >
-                <CalendarTodayIcon sx={{ fontSize: 9 }} />
+                {item.display}
               </Box>
-              <input ref={item.ref} type="date" value={item.val} onChange={e => item.onChange(e.target.value)}
-                style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
+              <input
+                ref={item.ref}
+                type="date"
+                value={item.val}
+                onChange={e => item.onChange(e.target.value)}
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, pointerEvents: 'none', zIndex: -1 }}
+              />
             </Box>
           ))}
         </Box>

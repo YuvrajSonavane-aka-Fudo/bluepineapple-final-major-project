@@ -18,11 +18,11 @@ export const loginWithEmail = (email) =>
 export const fetchProjects = () =>
   api.get('/projects/').then(r => r.data);
 
-export const fetchEmployeeDashboard = (body) =>
-  api.post('/dashboard/employees/', body).then(r => r.data);
+export const fetchEmployeeDashboard = (body, signal) =>
+  api.post('/dashboard/employees/', body, { signal }).then(r => r.data);
 
-export const fetchProjectDashboard = (body) =>
-  api.post('/dashboard/projects/', body).then(r => r.data);
+export const fetchProjectDashboard = (body, signal) =>
+  api.post('/dashboard/projects/', body, { signal }).then(r => r.data);
 
 export const fetchEmployeeCellDetails = (body) =>
   api.post('/dashboard/employee-cell-details/', body).then(r => r.data);

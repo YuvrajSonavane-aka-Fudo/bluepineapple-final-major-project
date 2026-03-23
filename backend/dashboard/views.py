@@ -716,7 +716,8 @@ def project_cell_details(request):
         "employees": employees_payload,
     })
 
-#ENDPOINT 7 - POST /api/v1/dashboard/day-details
+
+# ENDPOINT 7 - POST /api/v1/dashboard/day-details
 
 @api_view(["POST"])
 def day_details(request):
@@ -738,10 +739,20 @@ def day_details(request):
                       assigned_employees, employees_on_leave,
                       available_workforce, risk_level } ],
         employees_on_leave: [
-          { user_id, full_name, role, leave_type, is_half_day,
-            half_day_session?, spillover, projects: [ { project_id, project_name } ] }
+          {
+            user_id, full_name, role,
+            leave_type, is_half_day, half_day_session?,
+            availability,   <-- "ON_LEAVE" | "PARTIALLY_AVAILABLE" | "WFH"
+            spillover,
+            projects: [ { project_id, project_name } ]
+          }
         ]
       }
+
+    WFH employees are NOT counted in employees_on_leave counts or affected project
+    counts — they are working remotely and have no impact on availability or risk.
+    They are still included in the employees_on_leave list with availability = "WFH"
+    so the frontend can display them in a separate section if desired.
     """
     user = get_user_from_request(request)
     if not user:
@@ -780,7 +791,7 @@ def day_details(request):
         user_projects.setdefault(a.user_id, set()).add(a.project_id)
         all_member_ids.add(a.user_id)
 
-    # Direct leaves — filed under a scoped project
+    # Direct leaves — filed under a scoped project (ALL types including WFH)
     direct_leave_qs = LeaveApplication.objects.filter(
         user_id__in=all_member_ids,
         project_id__in=scoped_pids,
@@ -789,7 +800,7 @@ def day_details(request):
     )
     direct_leave_qs = apply_leave_filters(direct_leave_qs, leave_types, leave_statuses)
 
-    # Spillover leaves — filed under any OTHER project not in scoped_pids
+    # Spillover leaves — filed under any OTHER project not in scoped_pids (ALL types)
     spillover_leave_qs = LeaveApplication.objects.filter(
         user_id__in=all_member_ids,
         start_date__lte=target_date,
@@ -811,9 +822,24 @@ def day_details(request):
         if leave.user_id not in any_direct_leave_by_user:
             spillover_by_user[leave.user_id] = leave
 
-    # Combined: everyone who is unavailable today for any reason
+    # Combined: everyone who has any leave today (WFH or otherwise)
     # direct leave takes priority over spillover
     any_leave_by_user = {**spillover_by_user, **any_direct_leave_by_user}
+
+    def get_effective_leave_for_user(uid, project_id):
+        """
+        Returns the most relevant leave record for this user on this project.
+        Direct project leave takes priority; falls back to any other leave on the date.
+        """
+        direct = leave_by_user_project.get((uid, project_id))
+        if direct:
+            return direct
+        # Fallback: direct leave on another scoped project
+        direct_other = any_direct_leave_by_user.get(uid)
+        if direct_other and direct_other.project_id != project_id:
+            return direct_other
+        # Fallback: spillover from outside scoped projects
+        return spillover_by_user.get(uid)
 
     # ── Build project summaries ──────────────────────────────────────────────
     projects_payload = []
@@ -823,14 +849,12 @@ def day_details(request):
         member_ids     = project_members.get(project.id, set())
         assigned_count = len(member_ids)
 
-        on_leave_count = sum(
-            1 for uid in member_ids
-            if (uid, project.id) in leave_by_user_project   # direct leave
-            or (uid in spillover_by_user                      # spillover leave
-                and uid not in any_direct_leave_by_user)
-            or (uid in any_direct_leave_by_user               # direct leave on another scoped project
-                and (uid, project.id) not in leave_by_user_project)
-        )
+        # Only count actual absences — WFH is excluded from on_leave_count and risk
+        on_leave_count = 0
+        for uid in member_ids:
+            leave = get_effective_leave_for_user(uid, project.id)
+            if leave is not None and leave.leave_type != "WFH":
+                on_leave_count += 1
 
         available = assigned_count - on_leave_count
         if on_leave_count > 0:
@@ -841,20 +865,31 @@ def day_details(request):
             "project_name":        project.project_name,
             "required_workforce":  project.required_workforce,
             "assigned_employees":  assigned_count,
-            "employees_on_leave":  on_leave_count,
+            "employees_on_leave":  on_leave_count,   # WFH excluded
             "available_workforce": available,
             "risk_level":          calculate_risk_level(project, assigned_count, available),
         })
 
-    # ── Build employees-on-leave list ────────────────────────────────────────
+    # ── Build employees list (leave + WFH) ───────────────────────────────────
+    # Include everyone with any leave record today so frontend can split sections
     on_leave_users = User.objects.filter(
         id__in=any_leave_by_user.keys()
     ).order_by("full_name")
 
     employees_on_leave_payload = []
     for emp in on_leave_users:
-        leave    = any_leave_by_user[emp.id]
+        leave     = any_leave_by_user[emp.id]
         spillover = emp.id in spillover_by_user and emp.id not in any_direct_leave_by_user
+
+        # Derive availability — consistent with endpoints 5 & 6
+        if leave.leave_type == "WFH" and leave.is_half_day:
+            availability = "PARTIALLY_AVAILABLE"
+        elif leave.leave_type == "WFH":
+            availability = "WFH"
+        elif leave.is_half_day:
+            availability = "PARTIALLY_AVAILABLE"
+        else:
+            availability = "ON_LEAVE"
 
         emp_pids_in_scope = user_projects.get(emp.id, set()) & set(scoped_pids)
         emp_projects_qs   = Project.objects.filter(
@@ -862,12 +897,13 @@ def day_details(request):
         ).values("id", "project_name")
 
         entry = {
-            "user_id":    emp.id,
-            "full_name":  emp.full_name,
-            "role":       emp.role,
-            "leave_type": leave.leave_type,
-            "is_half_day": leave.is_half_day,
-            "spillover":  spillover,   # True = leave was filed under a different project
+            "user_id":      emp.id,
+            "full_name":    emp.full_name,
+            "role":         emp.role,
+            "leave_type":   leave.leave_type,
+            "is_half_day":  leave.is_half_day,
+            "availability": availability,
+            "spillover":    spillover,
             "projects": [
                 {"project_id": p["id"], "project_name": p["project_name"]}
                 for p in emp_projects_qs
@@ -881,18 +917,24 @@ def day_details(request):
     # ── Date metadata ────────────────────────────────────────────────────────
     holiday = PublicHolidays.objects.filter(holiday_date=target_date).first()
     date_meta = {
-        "date":             str(target_date),
-        "day":              target_date.strftime("%a"),
-        "is_weekend":       target_date.weekday() >= 5,
+        "date":              str(target_date),
+        "day":               target_date.strftime("%a"),
+        "is_weekend":        target_date.weekday() >= 5,
         "is_public_holiday": holiday is not None,
-        "holiday_name":     holiday.holiday_name if holiday else None,
+        "holiday_name":      holiday.holiday_name if holiday else None,
     }
+
+    # summary counts only real absences — WFH excluded
+    actual_on_leave_count = sum(
+        1 for e in employees_on_leave_payload
+        if e["availability"] != "WFH"
+    )
 
     return Response({
         "date": date_meta,
         "summary": {
             "total_projects_affected":  len(affected_pids),
-            "total_employees_on_leave": len(any_leave_by_user),
+            "total_employees_on_leave": actual_on_leave_count,
         },
         "projects":           projects_payload,
         "employees_on_leave": employees_on_leave_payload,
