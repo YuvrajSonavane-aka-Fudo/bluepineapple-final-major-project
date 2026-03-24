@@ -1,11 +1,8 @@
-// src/components/dashboard/SharedHeader.jsx
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { InputBase, Box, Typography } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DateStrip from './DateStrip';
 
-const FROZEN_W     = 300;
-const FROZEN_W_MOB = 140;
 const HEADER_H = 40;
 const THUMB_H  = 3;
 const THUMB_W  = 350;
@@ -36,8 +33,6 @@ export default function SharedHeader({
   employeeCells = {},
   globalSearch,
   onGlobalSearchChange,
-  searchMode,
-  onSearchModeChange,
   onDateClick,
   scrollRef,
   empScrollRef,
@@ -159,22 +154,60 @@ export default function SharedHeader({
     }}>
       {/* Legend toggle — desktop only; mobile uses FAB */}
       <Box
-        component="button"
-        onClick={onToggleLegend}
-        sx={{
-          position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-          width: 22, height: 22,
-          background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '50%',
-          cursor: 'pointer', display: { xs: 'none', md: 'flex' }, alignItems: 'center', justifyContent: 'center',
-          color: '#9aa0ad', p: 0, zIndex: 5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          '&:hover': { background: '#f0f2f5', color: '#5a6272' },
-        }}
-        title="Toggle Legend"
-      >
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <polyline points={legendVisible ? "9,18 15,12 9,6" : "15,18 9,12 15,6"}/>
-        </svg>
-      </Box>
+  component="button"
+  onClick={onToggleLegend}
+  sx={{
+    position: 'absolute',
+    right: 10,
+    top: '50%',
+    transform: 'translateY(-50%)',
+
+    width: 32,
+    height: 32,
+
+    background: '#ffffff',
+    border: '1px solid #e5e7eb',
+    borderRadius: '50%',
+
+    cursor: 'pointer',
+    display: { xs: 'none', md: 'flex' },
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    color: '#6b7280',
+    p: 0,
+    zIndex: 5,
+
+    boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
+    transition: 'all 0.2s ease',
+
+    '&:hover': {
+      background: '#f9fafb',
+      color: '#374151',
+      transform: 'translateY(-50%) scale(1.1)',
+    },
+
+    '&:active': {
+      transform: 'translateY(-50%) scale(0.96)',
+    }
+  }}
+  title={legendVisible ? 'Hide Legend' : 'Show Legend'}
+>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    style={{
+      transition: 'transform 0.2s ease',
+      transform: legendVisible ? 'rotate(180deg)' : 'rotate(0deg)'
+    }}
+  >
+    <polyline points="9,18 15,12 9,6" />
+  </svg>
+</Box>
       {/* Frozen column: ID label + global search + L.C. label */}
       <Box ref={frozenRef} sx={{
         width: FW, minWidth: FW, display: 'flex', alignItems: 'center', gap: isMobile ? 0.5 : 1,
@@ -195,30 +228,9 @@ export default function SharedHeader({
           mx: isMobile ? 0 : 1.5,
           overflow: 'hidden', minWidth: 0,
         }}>
-          {/* Mode pill toggle */}
-          <Box sx={{ display: 'flex', background: '#f0f2f5', borderRadius: '4px', p: '2px', flexShrink: 0, gap: '2px' }}>
-            {['EMP', 'PROJ'].map(mode => (
-              <Box
-                key={mode}
-                component="button"
-                onClick={() => onSearchModeChange(mode)}
-                sx={{
-                  px: '4px', py: '2px', borderRadius: '3px', border: 'none', cursor: 'pointer',
-                  fontSize: 10, fontWeight: 700, letterSpacing: '0.3px',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  background: searchMode === mode ? '#ffffff' : 'transparent',
-                  color: searchMode === mode ? '#1a1f2e' : '#9aa0ad',
-                  boxShadow: searchMode === mode ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {mode}
-              </Box>
-            ))}
-          </Box>
-          {!isMobile && <SearchIcon sx={{ fontSize: 13, color: '#9aa0ad', flexShrink: 0 }} />}
+          <SearchIcon sx={{ fontSize: 13, color: '#9aa0ad', flexShrink: 0 }} />
           <InputBase
-            placeholder={isMobile ? (searchMode === 'EMP' ? 'Search…' : 'Search…') : (searchMode === 'EMP' ? 'Search Employees...' : 'Search Projects...')}
+            placeholder={isMobile ? 'Search…' : 'Search employees or projects…'}
             value={globalSearch}
             onChange={e => onGlobalSearchChange(e.target.value)}
             sx={{ flex: 1, fontSize: isMobile ? 11 : 12, color: '#1a1f2e', minWidth: 0, '& input': { p: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" } }}

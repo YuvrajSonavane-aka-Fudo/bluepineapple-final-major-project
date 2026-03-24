@@ -1,8 +1,6 @@
-// src/components/dashboard/DateStrip.jsx
 import { parseISO, isToday } from 'date-fns';
 
-const CELL_W = 35;
-
+const CELL_W = 35;    //each column cell width of date-strip 
 export default function DateStrip({ dateStrip = [], onDateClick, projectCells = {}, employeeCells = {} }) {
   return (
     <div style={{ display: 'flex' }}>

@@ -1,15 +1,11 @@
-// src/components/dashboard/DraggableDivider.jsx
 import { useRef, useCallback } from 'react';
 import { Box } from '@mui/material';
 
 export default function DraggableDivider({ onResize }) {
   const dragging = useRef(false);
-  const pending  = useRef(null);  // last uncommitted clientY
+  const pending  = useRef(null);  
 
   // Flush pending position on the next animation frame.
-  // Only one rAF is ever queued at a time — subsequent pointer
-  // moves just overwrite `pending` so the frame always gets the
-  // freshest value with zero queuing lag.
   const scheduleFlush = useCallback(() => {
     if (pending.current === null) return;
     requestAnimationFrame(() => {
@@ -21,19 +17,14 @@ export default function DraggableDivider({ onResize }) {
   }, [onResize]);
 
   const onPointerDown = useCallback((e) => {
-    // Only left-click / primary touch
     if (e.button !== undefined && e.button !== 0) return;
     e.preventDefault();
-
-    // setPointerCapture routes all future pointer events for this
-    // pointerId to this element — no window listeners needed.
     e.currentTarget.setPointerCapture(e.pointerId);
     dragging.current = true;
   }, []);
 
   const onPointerMove = useCallback((e) => {
     if (!dragging.current) return;
-    // Overwrite — we only care about the latest position
     pending.current = e.clientY;
     scheduleFlush();
   }, [scheduleFlush]);
@@ -52,12 +43,11 @@ export default function DraggableDivider({ onResize }) {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       sx={{
-        height: '12px',
+        height: '6px',
         flexShrink: 0,
         cursor: 'row-resize',
         background: '#e8eaed',
         position: 'relative',
-        // pointer-events API handles touch natively — no touchAction needed
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
