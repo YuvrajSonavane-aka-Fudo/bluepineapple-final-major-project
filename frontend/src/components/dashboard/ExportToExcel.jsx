@@ -16,7 +16,7 @@
 import * as XLSX from 'xlsx';
 import { format, parseISO } from 'date-fns';
 
-// ── Colour palette (ARGB hex, no #) ──────────────────────────────────────────
+// Colour palette (ARGB hex, no #) 
 const C = {
   // Leave types
   PAID:        'FF2563EB',
@@ -75,7 +75,7 @@ function riskColor(riskLevel) {
   return C.RISK_NONE;
 }
 
-// ── Style builders ────────────────────────────────────────────────────────────
+//    Style builders 
 function font(bold = false, color = 'FF000000', sz = 10, name = 'Arial') {
   return { name, sz, bold, color: { rgb: color } };
 }
@@ -102,7 +102,7 @@ function cell(v, fnt, fll, aln, brd) {
   return c;
 }
 
-// ── Build human-readable filter summary ───────────────────────────────────────
+//    Build human-readable filter summary                                      
 // Handles both camelCase (leaveTypes) and snake_case (leave_types) filter keys.
 function buildFilterSummary(filters) {
   const parts = [];
@@ -134,27 +134,27 @@ function buildFilterSummary(filters) {
   return parts.join('     ');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+//                                                                             
 // Main export function
-// ─────────────────────────────────────────────────────────────────────────────
+//                                                                             
 export function exportDashboardToExcel({ empData, projData, dateStrip, filters = {} }) {
   const dates     = dateStrip || [];
   const employees = empData?.employees || [];
   const projects  = projData?.projects  || [];
 
-  // ── Filter: only keep employees with at least one leave cell ──────────────
+  //    Filter: only keep employees with at least one leave cell               
   const activeEmployees = employees.filter(emp =>
     Object.values(emp.cells || {}).some(c => c !== null)
   );
 
-  // ── Filter: only keep projects with at least one MEDIUM/HIGH risk cell ────
+  //    Filter: only keep projects with at least one MEDIUM/HIGH risk cell     
   const activeProjects = projects.filter(proj =>
     Object.values(proj.cells || {}).some(
       c => c && c.risk_level && c.risk_level !== 'LOW'
     )
   );
 
-  // ── Filter: only keep dates that have leave or an impacted project ─────────
+  //    Filter: only keep dates that have leave or an impacted project         
   const activeDates = dates.filter(d => {
     const hasLeave  = activeEmployees.some(emp => emp.cells?.[d.date] != null);
     const hasImpact = activeProjects.some(
@@ -168,7 +168,7 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
 
   const rows = [];
 
-  // ── Row 0: Metadata banner ─────────────────────────────────────────────────
+  //    Row 0: Metadata banner                                                 
   const metaText = `Leave Impact Dashboard     |     Exported: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
   const metaRow  = Array(TOTAL_COLS).fill(null).map(() =>
     cell('', font(false, C.HEADER_FG, 9), fill(C.META_BG), alignment('left'), null)
@@ -176,7 +176,7 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
   metaRow[0] = cell(metaText, font(true, C.HEADER_FG, 10), fill(C.META_BG), alignment('left'), null);
   rows.push(metaRow);
 
-  // ── Row 1: Active filters summary ─────────────────────────────────────────
+  //    Row 1: Active filters summary                                         
   const filterSummary = buildFilterSummary(filters);
   const filterRow = Array(TOTAL_COLS).fill(null).map(() =>
     cell('', font(false, C.FILTER_FG, 9), fill(C.FILTER_BG), alignment('left'), border(C.FILTER_BORDER))
@@ -190,7 +190,7 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
   );
   rows.push(filterRow);
 
-  // ── Helper: push a section header row ─────────────────────────────────────
+  //    Helper: push a section header row                                     
   function pushSectionHeader(label) {
     const r = Array(TOTAL_COLS).fill(null).map(() =>
       cell('', font(true, C.SECTION_FG, 10), fill(C.SECTION_BG), alignment('left'), null)
@@ -199,7 +199,7 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
     rows.push(r);
   }
 
-  // ── Helper: push the date header row ──────────────────────────────────────
+  //    Helper: push the date header row                                       
   function pushDateHeader(col1Label, col2Label) {
     const r = [];
     r.push(cell('Name',    font(true, C.HEADER_FG, 10), fill(C.HEADER_BG), alignment('left'),   border()));
@@ -224,7 +224,7 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
     rows.push(r);
   }
 
-  // ── Helper: push a divider row ─────────────────────────────────────────────
+  //    Helper: push a divider row                                             
   function pushDivider() {
     rows.push(
       Array(TOTAL_COLS).fill(null).map(() =>
@@ -233,9 +233,9 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  //                                                                         
   // SECTION 1 — EMPLOYEE LEAVE VIEW
-  // ─────────────────────────────────────────────────────────────────────────
+  //                                                                         
   pushSectionHeader('▸  EMPLOYEE LEAVE VIEW');
   pushDateHeader('Role', 'Leave Count');
 
@@ -281,9 +281,9 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
     rows.push(r);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  //                                                                         
   // SECTION 2 — PROJECT RISK VIEW
-  // ─────────────────────────────────────────────────────────────────────────
+  //                                                                         
   pushDivider();
   pushSectionHeader('▸  PROJECT RISK VIEW');
   pushDateHeader('Req. Workforce', 'Assigned');
@@ -332,9 +332,9 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
     rows.push(r);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  //                                                                         
   // Build worksheet
-  // ─────────────────────────────────────────────────────────────────────────
+  //                                                                         
   const ws      = {};
   const numRows = rows.length;
   const numCols = TOTAL_COLS;
