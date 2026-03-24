@@ -19,46 +19,46 @@ import { format, parseISO } from 'date-fns';
 // Colour palette (ARGB hex, no #) 
 const C = {
   // Leave types
-  PAID:        'FF2563EB',
-  SICK:        'FFEF4444',
-  WFH:         'FF59be68',
-  HALF_DAY:    'FF8B5CF6',
-  CONFERENCE:  'FFF59E0B',
-  UNPAID:      'FF93C5FD',
+  PAID: 'FF2563EB',
+  SICK: 'FFEF4444',
+  WFH: 'FF59be68',
+  HALF_DAY: 'FF8B5CF6',
+  CONFERENCE: 'FFF59E0B',
+  UNPAID: 'FF93C5FD',
 
   // Risk levels (background)
-  RISK_LOW:    'FFC6EFCE',
-  RISK_MED:    'FFFFEB9C',
-  RISK_HIGH:   'FFFFC7CE',
-  RISK_NONE:   'FFF8F9FB',
+  RISK_LOW: 'FFC6EFCE',
+  RISK_MED: 'FFFFEB9C',
+  RISK_HIGH: 'FFFFC7CE',
+  RISK_NONE: 'FFF8F9FB',
 
   // Structure
-  SECTION_BG:  'FF1F3864',
-  SECTION_FG:  'FFFFFFFF',
-  HEADER_BG:   'FFE8EAED',
-  HEADER_FG:   'FF1A1F2E',
-  DIVIDER_BG:  'FFC8CDD6',
-  META_BG:     'FFF0F2F5',
-  FILTER_BG:   'FFFFFBEB',   // warm yellow tint
-  FILTER_FG:   'FF92400E',   // amber-brown text
+  SECTION_BG: 'FF1F3864',
+  SECTION_FG: 'FFFFFFFF',
+  HEADER_BG: 'FFE8EAED',
+  HEADER_FG: 'FF1A1F2E',
+  DIVIDER_BG: 'FFC8CDD6',
+  META_BG: 'FFF0F2F5',
+  FILTER_BG: 'FFFFFBEB',   // warm yellow tint
+  FILTER_FG: 'FF92400E',   // amber-brown text
   FILTER_BORDER: 'FFFDE68A',
-  WHITE:       'FFFFFFFF',
-  FROZEN_BG:   'FFFFFFFF',
-  FROZEN_FG:   'FF1A1F2E',
-  LEAVE_FG:    'FFFFFFFF',
-  AVAIL_FG:    'FF9AA0AD',
-  AVAIL_BG:    'FFFFFFFF',
-  WEEKEND_BG:  'FFF3F4F6',
-  WEEKEND_FG:  'FF9AA0AD',
+  WHITE: 'FFFFFFFF',
+  FROZEN_BG: 'FFFFFFFF',
+  FROZEN_FG: 'FF1A1F2E',
+  LEAVE_FG: 'FFFFFFFF',
+  AVAIL_FG: 'FF9AA0AD',
+  AVAIL_BG: 'FFFFFFFF',
+  WEEKEND_BG: 'FFF3F4F6',
+  WEEKEND_FG: 'FF9AA0AD',
 };
 
 const LEAVE_COLOR = {
-  'Paid':       C.PAID,
-  'Sick':       C.SICK,
-  'WFH':        C.WFH,
-  'Half Day':   C.HALF_DAY,
+  'Paid': C.PAID,
+  'Sick': C.SICK,
+  'WFH': C.WFH,
+  'Half Day': C.HALF_DAY,
   'Conference': C.CONFERENCE,
-  'Unpaid':     C.UNPAID,
+  'Unpaid': C.UNPAID,
 };
 
 // All known leave types — used to detect "all selected" vs a subset
@@ -69,9 +69,9 @@ function leaveColor(leaveType) {
 }
 
 function riskColor(riskLevel) {
-  if (riskLevel === 'HIGH')   return C.RISK_HIGH;
+  if (riskLevel === 'HIGH') return C.RISK_HIGH;
   if (riskLevel === 'MEDIUM') return C.RISK_MED;
-  if (riskLevel === 'LOW')    return C.RISK_LOW;
+  if (riskLevel === 'LOW') return C.RISK_LOW;
   return C.RISK_NONE;
 }
 
@@ -129,7 +129,7 @@ function buildFilterSummary(filters) {
 
   // Optional: department / team
   if (filters.department) parts.push(`🏢  Dept: ${filters.department}`);
-  if (filters.team)       parts.push(`👥  Team: ${filters.team}`);
+  if (filters.team) parts.push(`👥  Team: ${filters.team}`);
 
   return parts.join('     ');
 }
@@ -138,9 +138,9 @@ function buildFilterSummary(filters) {
 // Main export function
 //                                                                             
 export function exportDashboardToExcel({ empData, projData, dateStrip, filters = {} }) {
-  const dates     = dateStrip || [];
+  const dates = dateStrip || [];
   const employees = empData?.employees || [];
-  const projects  = projData?.projects  || [];
+  const projects = projData?.projects || [];
 
   //    Filter: only keep employees with at least one leave cell               
   const activeEmployees = employees.filter(emp =>
@@ -148,15 +148,22 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
   );
 
   //    Filter: only keep projects with at least one MEDIUM/HIGH risk cell     
-  const activeProjects = projects.filter(proj =>
-    Object.values(proj.cells || {}).some(
-      c => c && c.risk_level && c.risk_level !== 'LOW'
-    )
-  );
+ const activeProjects = projects.filter(proj =>
+  Object.values(proj.cells || {}).some(c => {
+    if (!c) return false;
+
+    const hasLeaveImpact =
+      (c.employees_on_leave ?? 0) > 0 ||
+      (c.partial_count ?? 0) > 0 ||
+      (c.wfh_count ?? 0) > 0;
+
+    return c.risk_level !== 'LOW' || hasLeaveImpact;
+  })
+);
 
   //    Filter: only keep dates that have leave or an impacted project         
   const activeDates = dates.filter(d => {
-    const hasLeave  = activeEmployees.some(emp => emp.cells?.[d.date] != null);
+    const hasLeave = activeEmployees.some(emp => emp.cells?.[d.date] != null);
     const hasImpact = activeProjects.some(
       proj => proj.cells?.[d.date] && proj.cells[d.date].risk_level !== 'LOW'
     );
@@ -164,13 +171,13 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
   });
 
   const DATE_START_COL = 3;
-  const TOTAL_COLS     = DATE_START_COL + activeDates.length;
+  const TOTAL_COLS = DATE_START_COL + activeDates.length;
 
   const rows = [];
 
   //    Row 0: Metadata banner                                                 
   const metaText = `Leave Impact Dashboard     |     Exported: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
-  const metaRow  = Array(TOTAL_COLS).fill(null).map(() =>
+  const metaRow = Array(TOTAL_COLS).fill(null).map(() =>
     cell('', font(false, C.HEADER_FG, 9), fill(C.META_BG), alignment('left'), null)
   );
   metaRow[0] = cell(metaText, font(true, C.HEADER_FG, 10), fill(C.META_BG), alignment('left'), null);
@@ -202,17 +209,17 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
   //    Helper: push the date header row                                       
   function pushDateHeader(col1Label, col2Label) {
     const r = [];
-    r.push(cell('Name',    font(true, C.HEADER_FG, 10), fill(C.HEADER_BG), alignment('left'),   border()));
+    r.push(cell('Name', font(true, C.HEADER_FG, 10), fill(C.HEADER_BG), alignment('left'), border()));
     r.push(cell(col1Label, font(true, C.HEADER_FG, 10), fill(C.HEADER_BG), alignment('center'), border()));
     r.push(cell(col2Label, font(true, C.HEADER_FG, 10), fill(C.HEADER_BG), alignment('center'), border()));
     for (const d of activeDates) {
-      const parsed    = parseISO(d.date);
-      const dayLbl    = format(parsed, 'EEE').toUpperCase();
-      const dateLbl   = format(parsed, 'dd/MM');
+      const parsed = parseISO(d.date);
+      const dayLbl = format(parsed, 'EEE').toUpperCase();
+      const dateLbl = format(parsed, 'dd/MM');
       const isWeekend = d.is_weekend;
       const isHoliday = d.is_public_holiday;
-      const bgColor   = isWeekend ? C.WEEKEND_BG : isHoliday ? 'FFFEFCE8' : C.HEADER_BG;
-      const fgColor   = isWeekend ? C.WEEKEND_FG : C.HEADER_FG;
+      const bgColor = isWeekend ? C.WEEKEND_BG : isHoliday ? 'FFFEFCE8' : C.HEADER_BG;
+      const fgColor = isWeekend ? C.WEEKEND_FG : C.HEADER_FG;
       r.push(cell(
         `${dayLbl}\n${dateLbl}`,
         font(true, fgColor, 9),
@@ -270,7 +277,7 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
         const lColor = leaveColor(c.leave_type);
         let label = c.leave_type || '';
         if (c.is_half_day) label += c.half_day_session === 'First Half' ? ' ½AM' : ' ½PM';
-        if (c.leave_status === 'Pending')  label += ' P';
+        if (c.leave_status === 'Pending') label += ' P';
         if (c.leave_status === 'Rejected') label += ' R';
         r.push(cell(
           label,
@@ -308,21 +315,32 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
     for (const d of activeDates) {
       const c = proj.cells?.[d.date];
 
-      if (!c || !c.risk_level || c.risk_level === 'LOW') {
+      if (!c) {
         r.push(cell('', font(), fill(C.AVAIL_BG), alignment('center'), null));
         continue;
       }
 
-      const bgColor  = riskColor(c.risk_level);
-      const avail    = c.available_workforce ?? 0;
-      const assigned = c.assigned_employees  ?? 0;
-      let label = `${avail}/${assigned}`;
-      if (c.risk_level === 'HIGH')   label += '\n HIGH';
-      if (c.risk_level === 'MEDIUM') label += '\n MED';
+     const hasLeaveImpact =
+  (c.employees_on_leave ?? c.on_leave_count ?? 0) > 0 ||
+  (c.partial_count ?? c.partial_leave_count ?? 0) > 0 ||
+  (c.wfh_count ?? 0) > 0;
 
-      const fgColor = c.risk_level === 'HIGH'   ? 'FF9C0006'
-                    : c.risk_level === 'MEDIUM'  ? 'FF9C6500'
-                    : 'FF276221';
+      // Skip ONLY if LOW and no impact
+      if (c.risk_level === 'LOW' && !hasLeaveImpact) {
+        r.push(cell('', font(), fill(C.AVAIL_BG), alignment('center'), null));
+        continue;
+      }
+
+      const bgColor = riskColor(c.risk_level);
+      const avail = c.available_workforce ?? 0;
+      const assigned = c.assigned_employees ?? 0;
+      let label = `${avail}/${assigned}`;
+      if (c.risk_level === 'HIGH') label += '\n HIGH';
+      if (c.risk_level === 'MEDIUM') label += '\n MED';
+      if (c.risk_level === 'LOW') label += '\n LOW';
+      const fgColor = c.risk_level === 'HIGH' ? 'FF9C0006'
+        : c.risk_level === 'MEDIUM' ? 'FF9C6500'
+          : 'FF276221';
 
       r.push(cell(
         label,
@@ -335,14 +353,14 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
   //                                                                         
   // Build worksheet
   //                                                                         
-  const ws      = {};
+  const ws = {};
   const numRows = rows.length;
   const numCols = TOTAL_COLS;
 
   for (let r = 0; r < numRows; r++) {
     for (let c = 0; c < numCols; c++) {
       const cellRef = XLSX.utils.encode_cell({ r, c });
-      ws[cellRef]   = rows[r]?.[c] || { v: '', t: 's' };
+      ws[cellRef] = rows[r]?.[c] || { v: '', t: 's' };
     }
   }
 
@@ -374,12 +392,12 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
   XLSX.utils.book_append_sheet(wb, ws, 'Leave Dashboard');
 
   const filename = buildFilename(filters);
-  const wbout    = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
-  const blob     = new Blob([wbout], { type: 'application/octet-stream' });
-  const url      = URL.createObjectURL(blob);
-  const a        = document.createElement('a');
-  a.href         = url;
-  a.download     = filename;
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -389,6 +407,6 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
 function buildFilename(filters) {
   const today = format(new Date(), 'yyyyMMdd');
   const start = filters.start_date ? `_${filters.start_date}` : '';
-  const end   = filters.end_date   ? `_to_${filters.end_date}` : '';
+  const end = filters.end_date ? `_to_${filters.end_date}` : '';
   return `Leave_Dashboard${start}${end}_${today}.xlsx`;
 }
