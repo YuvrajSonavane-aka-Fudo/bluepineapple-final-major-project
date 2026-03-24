@@ -1,85 +1,380 @@
 // src/components/dashboard/ExportToExcel.jsx
 //
-// Usage:
-//   import { exportDashboardToExcel } from './ExportToExcel';
-//
-//   exportDashboardToExcel({
-//     empData,     // { date_strip: [...], employees: [...] }
-//     projData,    // { date_strip: [...], projects: [...] }
-//     dateStrip,   // filtered date strip (weekends removed if hideWeekends is on)
-//     filters,     // { start_date, end_date, project_ids, leave_types, leave_statuses }
-//   });
+// Single-sheet export that mirrors the dashboard layout:
+//   Row 1  : Export metadata (title + exported timestamp)
+//   Row 2  : Active filters summary (date range, leave types, projects, dept/team)
+//   Row 3  : Section header — EMPLOYEE LEAVE VIEW
+//   Row 4  : Column headers (frozen name col + date cols)
+//   Row 5+ : One row per employee, one col per date (coloured by leave type)
+//   Next   : Divider row
+//   Next   : Section header — PROJECT RISK VIEW
+//   Next   : Column headers
+//   Next   : One row per project, one col per date (coloured by risk level)
 //
 // Requires: npm install xlsx
 
 import * as XLSX from 'xlsx';
 import { format, parseISO } from 'date-fns';
 
-// ─── Column definitions ───────────────────────────────────────────────────────
+// ── Colour palette (ARGB hex, no #) ──────────────────────────────────────────
+const C = {
+  // Leave types
+  PAID:        'FF2563EB',
+  SICK:        'FFEF4444',
+  WFH:         'FF59be68',
+  HALF_DAY:    'FF8B5CF6',
+  CONFERENCE:  'FFF59E0B',
+  UNPAID:      'FF93C5FD',
 
-const EMP_COLUMNS = [
-  { key: 'date',             header: 'Date'             },
-  { key: 'day',              header: 'Day'              },
-  { key: 'employee_id',      header: 'Employee ID'      },
-  { key: 'employee_name',    header: 'Employee Name'    },
-  { key: 'role',             header: 'Role'             },
-  { key: 'availability',     header: 'Availability'     },
-  { key: 'leave_type',       header: 'Leave Type'       },
-  { key: 'is_half_day',      header: 'Half Day'         },
-  { key: 'half_day_session', header: 'Half Day Session' },
-  { key: 'project_name',     header: 'Project'          },
-  { key: 'impact_pct',       header: 'Impact %'         },
-  { key: 'risk_level',       header: 'Risk Level'       },
-];
+  // Risk levels (background)
+  RISK_LOW:    'FFC6EFCE',
+  RISK_MED:    'FFFFEB9C',
+  RISK_HIGH:   'FFFFC7CE',
+  RISK_NONE:   'FFF8F9FB',
 
-const PROJ_COLUMNS = [
-  { key: 'project_name',        header: 'Project Name'       },
-  { key: 'date',                header: 'Date'               },
-  { key: 'day',                 header: 'Day'                },
-  { key: 'required_workforce',  header: 'Required Workforce' },
-  { key: 'assigned_employees',  header: 'Assigned'           },
-  { key: 'employees_on_leave',  header: 'On Leave'           },
-  { key: 'wfh_count',           header: 'WFH'                },
-  { key: 'partial_count',       header: 'Partial'            },
-  { key: 'available_workforce', header: 'Available'          },
-  { key: 'impact_pct',          header: 'Impact %'           },
-  { key: 'risk_level',          header: 'Risk Level'         },
-];
+  // Structure
+  SECTION_BG:  'FF1F3864',
+  SECTION_FG:  'FFFFFFFF',
+  HEADER_BG:   'FFE8EAED',
+  HEADER_FG:   'FF1A1F2E',
+  DIVIDER_BG:  'FFC8CDD6',
+  META_BG:     'FFF0F2F5',
+  FILTER_BG:   'FFFFFBEB',   // warm yellow tint
+  FILTER_FG:   'FF92400E',   // amber-brown text
+  FILTER_BORDER: 'FFFDE68A',
+  WHITE:       'FFFFFFFF',
+  FROZEN_BG:   'FFFFFFFF',
+  FROZEN_FG:   'FF1A1F2E',
+  LEAVE_FG:    'FFFFFFFF',
+  AVAIL_FG:    'FF9AA0AD',
+  AVAIL_BG:    'FFFFFFFF',
+  WEEKEND_BG:  'FFF3F4F6',
+  WEEKEND_FG:  'FF9AA0AD',
+};
 
-const SUMMARY_COLUMNS = [
-  { key: 'employee_id',   header: 'Employee ID'      },
-  { key: 'employee_name', header: 'Employee Name'    },
-  { key: 'role',          header: 'Role'             },
-  { key: 'total_days',    header: 'Total Leave Days' },
-  { key: 'on_leave_days', header: 'On Leave Days'    },
-  { key: 'wfh_days',      header: 'WFH Days'         },
-  { key: 'partial_days',  header: 'Partial Days'     },
-];
+const LEAVE_COLOR = {
+  'Paid':       C.PAID,
+  'Sick':       C.SICK,
+  'WFH':        C.WFH,
+  'Half Day':   C.HALF_DAY,
+  'Conference': C.CONFERENCE,
+  'Unpaid':     C.UNPAID,
+};
 
-const FILTER_COLUMNS = [
-  { key: 'label', header: 'Filter'    },
-  { key: 'value', header: 'Selection' },
-];
+// All known leave types — used to detect "all selected" vs a subset
+const ALL_LEAVE_TYPES = ['Paid', 'Sick', 'WFH', 'Half Day', 'Conference', 'Unpaid'];
 
+function leaveColor(leaveType) {
+  return LEAVE_COLOR[leaveType] || C.PAID;
+}
+
+function riskColor(riskLevel) {
+  if (riskLevel === 'HIGH')   return C.RISK_HIGH;
+  if (riskLevel === 'MEDIUM') return C.RISK_MED;
+  if (riskLevel === 'LOW')    return C.RISK_LOW;
+  return C.RISK_NONE;
+}
+
+// ── Style builders ────────────────────────────────────────────────────────────
+function font(bold = false, color = 'FF000000', sz = 10, name = 'Arial') {
+  return { name, sz, bold, color: { rgb: color } };
+}
+
+function fill(rgb) {
+  return { type: 'pattern', pattern: 'solid', fgColor: { rgb } };
+}
+
+function border(color = 'FFD1D5DB') {
+  const s = { style: 'thin', color: { rgb: color } };
+  return { top: s, bottom: s, left: s, right: s };
+}
+
+function alignment(h = 'center', v = 'center', wrap = false) {
+  return { horizontal: h, vertical: v, wrapText: wrap };
+}
+
+function cell(v, fnt, fll, aln, brd) {
+  const c = { v, t: typeof v === 'number' ? 'n' : 's' };
+  if (fnt) c.s = { ...(c.s || {}), font: fnt };
+  if (fll) c.s = { ...(c.s || {}), fill: fll };
+  if (aln) c.s = { ...(c.s || {}), alignment: aln };
+  if (brd) c.s = { ...(c.s || {}), border: brd };
+  return c;
+}
+
+// ── Build human-readable filter summary ───────────────────────────────────────
+// Handles both camelCase (leaveTypes) and snake_case (leave_types) filter keys.
+function buildFilterSummary(filters) {
+  const parts = [];
+
+  // Date range
+  if (filters.start_date || filters.end_date) {
+    parts.push(`  ${filters.start_date || '—'}  →  ${filters.end_date || '—'}`);
+  }
+
+  // Leave types — support both key conventions
+  const leaveTypes = filters.leave_types ?? filters.leaveTypes ?? [];
+  if (leaveTypes.length === 0 || leaveTypes.length >= ALL_LEAVE_TYPES.length) {
+    parts.push('🏷  Leave Types: All');
+  } else {
+    parts.push(`🏷  Leave Types: ${leaveTypes.join(', ')}`);
+  }
+
+  // Projects
+  if (filters.project_ids?.length) {
+    parts.push(`📁  Projects: ${filters.project_ids.length} selected`);
+  } else {
+    parts.push('📁  Projects: All');
+  }
+
+  // Optional: department / team
+  if (filters.department) parts.push(`🏢  Dept: ${filters.department}`);
+  if (filters.team)       parts.push(`👥  Team: ${filters.team}`);
+
+  return parts.join('     ');
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Core export function
+// Main export function
 // ─────────────────────────────────────────────────────────────────────────────
 export function exportDashboardToExcel({ empData, projData, dateStrip, filters = {} }) {
+  const dates     = dateStrip || [];
+  const employees = empData?.employees || [];
+  const projects  = projData?.projects  || [];
+
+  // ── Filter: only keep employees with at least one leave cell ──────────────
+  const activeEmployees = employees.filter(emp =>
+    Object.values(emp.cells || {}).some(c => c !== null)
+  );
+
+  // ── Filter: only keep projects with at least one MEDIUM/HIGH risk cell ────
+  const activeProjects = projects.filter(proj =>
+    Object.values(proj.cells || {}).some(
+      c => c && c.risk_level && c.risk_level !== 'LOW'
+    )
+  );
+
+  // ── Filter: only keep dates that have leave or an impacted project ─────────
+  const activeDates = dates.filter(d => {
+    const hasLeave  = activeEmployees.some(emp => emp.cells?.[d.date] != null);
+    const hasImpact = activeProjects.some(
+      proj => proj.cells?.[d.date] && proj.cells[d.date].risk_level !== 'LOW'
+    );
+    return hasLeave || hasImpact;
+  });
+
+  const DATE_START_COL = 3;
+  const TOTAL_COLS     = DATE_START_COL + activeDates.length;
+
+  const rows = [];
+
+  // ── Row 0: Metadata banner ─────────────────────────────────────────────────
+  const metaText = `Leave Impact Dashboard     |     Exported: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
+  const metaRow  = Array(TOTAL_COLS).fill(null).map(() =>
+    cell('', font(false, C.HEADER_FG, 9), fill(C.META_BG), alignment('left'), null)
+  );
+  metaRow[0] = cell(metaText, font(true, C.HEADER_FG, 10), fill(C.META_BG), alignment('left'), null);
+  rows.push(metaRow);
+
+  // ── Row 1: Active filters summary ─────────────────────────────────────────
+  const filterSummary = buildFilterSummary(filters);
+  const filterRow = Array(TOTAL_COLS).fill(null).map(() =>
+    cell('', font(false, C.FILTER_FG, 9), fill(C.FILTER_BG), alignment('left'), border(C.FILTER_BORDER))
+  );
+  filterRow[0] = cell(
+    filterSummary,
+    font(false, C.FILTER_FG, 9),
+    fill(C.FILTER_BG),
+    alignment('left', 'center', false),
+    border(C.FILTER_BORDER)
+  );
+  rows.push(filterRow);
+
+  // ── Helper: push a section header row ─────────────────────────────────────
+  function pushSectionHeader(label) {
+    const r = Array(TOTAL_COLS).fill(null).map(() =>
+      cell('', font(true, C.SECTION_FG, 10), fill(C.SECTION_BG), alignment('left'), null)
+    );
+    r[0] = cell(label, font(true, C.SECTION_FG, 10), fill(C.SECTION_BG), alignment('left'), null);
+    rows.push(r);
+  }
+
+  // ── Helper: push the date header row ──────────────────────────────────────
+  function pushDateHeader(col1Label, col2Label) {
+    const r = [];
+    r.push(cell('Name',    font(true, C.HEADER_FG, 10), fill(C.HEADER_BG), alignment('left'),   border()));
+    r.push(cell(col1Label, font(true, C.HEADER_FG, 10), fill(C.HEADER_BG), alignment('center'), border()));
+    r.push(cell(col2Label, font(true, C.HEADER_FG, 10), fill(C.HEADER_BG), alignment('center'), border()));
+    for (const d of activeDates) {
+      const parsed    = parseISO(d.date);
+      const dayLbl    = format(parsed, 'EEE').toUpperCase();
+      const dateLbl   = format(parsed, 'dd/MM');
+      const isWeekend = d.is_weekend;
+      const isHoliday = d.is_public_holiday;
+      const bgColor   = isWeekend ? C.WEEKEND_BG : isHoliday ? 'FFFEFCE8' : C.HEADER_BG;
+      const fgColor   = isWeekend ? C.WEEKEND_FG : C.HEADER_FG;
+      r.push(cell(
+        `${dayLbl}\n${dateLbl}`,
+        font(true, fgColor, 9),
+        fill(bgColor),
+        alignment('center', 'center', true),
+        border()
+      ));
+    }
+    rows.push(r);
+  }
+
+  // ── Helper: push a divider row ─────────────────────────────────────────────
+  function pushDivider() {
+    rows.push(
+      Array(TOTAL_COLS).fill(null).map(() =>
+        cell('', font(), fill(C.DIVIDER_BG), alignment(), null)
+      )
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SECTION 1 — EMPLOYEE LEAVE VIEW
+  // ─────────────────────────────────────────────────────────────────────────
+  pushSectionHeader('▸  EMPLOYEE LEAVE VIEW');
+  pushDateHeader('Role', 'Leave Count');
+
+  for (const emp of activeEmployees) {
+    const leaveCount = Object.values(emp.cells || {}).filter(c => c !== null).length;
+    const r = [];
+
+    r.push(cell(
+      `${emp.full_name}  #${String(emp.user_id).padStart(4, '0')}`,
+      font(true, C.FROZEN_FG, 10), fill(C.FROZEN_BG), alignment('left', 'center'), border()
+    ));
+    r.push(cell(
+      emp.role || '',
+      font(false, C.FROZEN_FG, 9), fill(C.FROZEN_BG), alignment('center', 'center'), border()
+    ));
+    r.push(cell(
+      leaveCount,
+      font(true, 'FF4338CA', 9), fill('FFEEF2FF'), alignment('center', 'center'), border('FFC7D2FE')
+    ));
+
+    for (const d of activeDates) {
+      const c = emp.cells?.[d.date];
+      if (!c) {
+        r.push(cell(
+          '',
+          font(false, C.AVAIL_FG, 9),
+          fill(d.is_weekend ? C.WEEKEND_BG : C.AVAIL_BG),
+          alignment('center'),
+          null
+        ));
+      } else {
+        const lColor = leaveColor(c.leave_type);
+        let label = c.leave_type || '';
+        if (c.is_half_day) label += c.half_day_session === 'First Half' ? ' ½AM' : ' ½PM';
+        if (c.leave_status === 'Pending')  label += ' P';
+        if (c.leave_status === 'Rejected') label += ' R';
+        r.push(cell(
+          label,
+          font(true, C.LEAVE_FG, 8), fill(lColor), alignment('center', 'center', true), border(lColor)
+        ));
+      }
+    }
+    rows.push(r);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SECTION 2 — PROJECT RISK VIEW
+  // ─────────────────────────────────────────────────────────────────────────
+  pushDivider();
+  pushSectionHeader('▸  PROJECT RISK VIEW');
+  pushDateHeader('Req. Workforce', 'Assigned');
+
+  for (const proj of activeProjects) {
+    const r = [];
+
+    r.push(cell(
+      proj.project_name,
+      font(true, C.FROZEN_FG, 10), fill(C.FROZEN_BG), alignment('left', 'center'), border()
+    ));
+    r.push(cell(
+      proj.required_workforce ?? '',
+      font(false, C.FROZEN_FG, 9), fill(C.FROZEN_BG), alignment('center', 'center'), border()
+    ));
+    const firstCell = Object.values(proj.cells || {}).find(Boolean);
+    r.push(cell(
+      firstCell?.assigned_employees ?? '',
+      font(false, C.FROZEN_FG, 9), fill(C.FROZEN_BG), alignment('center', 'center'), border()
+    ));
+
+    for (const d of activeDates) {
+      const c = proj.cells?.[d.date];
+
+      if (!c || !c.risk_level || c.risk_level === 'LOW') {
+        r.push(cell('', font(), fill(C.AVAIL_BG), alignment('center'), null));
+        continue;
+      }
+
+      const bgColor  = riskColor(c.risk_level);
+      const avail    = c.available_workforce ?? 0;
+      const assigned = c.assigned_employees  ?? 0;
+      let label = `${avail}/${assigned}`;
+      if (c.risk_level === 'HIGH')   label += '\n HIGH';
+      if (c.risk_level === 'MEDIUM') label += '\n MED';
+
+      const fgColor = c.risk_level === 'HIGH'   ? 'FF9C0006'
+                    : c.risk_level === 'MEDIUM'  ? 'FF9C6500'
+                    : 'FF276221';
+
+      r.push(cell(
+        label,
+        font(true, fgColor, 9), fill(bgColor), alignment('center', 'center', true), border(bgColor)
+      ));
+    }
+    rows.push(r);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Build worksheet
+  // ─────────────────────────────────────────────────────────────────────────
+  const ws      = {};
+  const numRows = rows.length;
+  const numCols = TOTAL_COLS;
+
+  for (let r = 0; r < numRows; r++) {
+    for (let c = 0; c < numCols; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r, c });
+      ws[cellRef]   = rows[r]?.[c] || { v: '', t: 's' };
+    }
+  }
+
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: numRows - 1, c: numCols - 1 } });
+
+  // Merge both header rows across all columns
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } },   // meta row
+    { s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } },   // filter row
+  ];
+
+  ws['!cols'] = [
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 10 },
+    ...activeDates.map(() => ({ wch: 9 })),
+  ];
+
+  ws['!rows'] = rows.map((_, i) => {
+    if (i === 0) return { hpt: 20 };   // meta
+    if (i === 1) return { hpt: 22 };   // filters
+    return { hpt: 30 };
+  });
+
+  // Freeze panes — ySplit bumped to 3 to keep meta + filter rows always visible
+  ws['!freeze'] = { xSplit: DATE_START_COL, ySplit: 3, topLeftCell: 'D4', activeCell: 'D4', sqref: 'D4' };
+
   const wb = XLSX.utils.book_new();
-
-  // Build lookup: { user_id: Set(project_name) } — which projects each employee belongs to
-  // This is derived from projData: if an employee appears in a project's cells at all,
-  // they are assigned to that project.
-  const empProjectMap = buildEmpProjectMap(empData, projData);
-
-  appendSheet(wb, buildEmpRows(empData, projData, dateStrip, empProjectMap),  EMP_COLUMNS,     'Employee Leave Detail');
-  appendSheet(wb, buildProjRows(projData, dateStrip),                          PROJ_COLUMNS,    'Project Risk Summary');
-  appendSheet(wb, buildSummaryRows(empData, dateStrip),                        SUMMARY_COLUMNS, 'Summary by Employee');
-  appendSheet(wb, buildFilterRows(filters),                                    FILTER_COLUMNS,  'Filters Applied');
+  XLSX.utils.book_append_sheet(wb, ws, 'Leave Dashboard');
 
   const filename = buildFilename(filters);
-  const wbout    = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const wbout    = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
   const blob     = new Blob([wbout], { type: 'application/octet-stream' });
   const url      = URL.createObjectURL(blob);
   const a        = document.createElement('a');
@@ -91,246 +386,9 @@ export function exportDashboardToExcel({ empData, projData, dateStrip, filters =
   URL.revokeObjectURL(url);
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Build emp → project map from projData
-// { user_id: [{ project_name, cells }] }
-// We can't get user_id from projData directly, so we cross-reference:
-// empData tells us which user_ids exist, projData tells us project cell data.
-// The correct approach: for each employee in empData, find which projects
-// in projData have that employee affected (via spillover logic in backend).
-// Since we don't have direct assignment data in the frontend, we use a simpler
-// rule: an employee's leave row should only show projects where
-// projData cells show employees_on_leave > 0 OR wfh_count > 0 OR partial_count > 0
-// AND the employee has leave on that same date.
-// The TRUE fix: projData project cells now have per-date counts but NOT which
-// employees. So we build the map from the employee's own assignment data.
-// Best available signal: use the project_name already in the employee cell if
-// the backend sends it, otherwise match by date overlap only for projects
-// where assigned_employees includes this employee.
-//
-// Since backend doesn't send per-employee project assignments in empData,
-// we derive it: employee is "on" a project if projData shows that project
-// having assigned_employees > 0 on dates the employee has leave.
-// This still over-assigns. The CORRECT fix is to track it properly:
-// we build a { user_id -> Set<project_name> } by checking if the employee's
-// leave date coincides with a project that shows impact — but filtered to
-// only projects where assigned > 0 AND the employee count difference matches.
-//
-// REAL fix: since we have no direct employee-project mapping in frontend data,
-// we use the employee's role/name and check against all projects. Instead,
-// we rely on the fact that the backend empData cells contain a `project_id`
-// or `project_name` field if available. If not, we show only 1 row per
-// employee per date with no project column (safer than wrong data).
-// ─────────────────────────────────────────────────────────────────────────────
-function buildEmpProjectMap(empData, projData) {
-  // Build: { project_name -> Set(date) } where project was affected
-  // We cannot know which employees are on which project from frontend data alone
-  // unless the employee cell has a project reference.
-  // Return empty map — we'll handle in buildEmpRows by checking cell.project_name
-  return {};
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sheet 1 — Employee Leave Detail
-// ONE row per employee per date — no project fan-out
-// Project column shows cell.project_name if backend provides it, else blank
-// ─────────────────────────────────────────────────────────────────────────────
-function buildEmpRows(empData, projData, dateStrip) {
-  const rows = [];
-
-  // Build lookup: { project_id -> { project_name, cells: { date -> cell } } }
-  const projById = {};
-  for (const proj of (projData.projects || [])) {
-    projById[proj.project_id] = proj;
-  }
-
-  for (const emp of (empData.employees || [])) {
-    for (const d of dateStrip) {
-      const cell = emp.cells?.[d.date];
-      if (!cell) continue;
-
-      const parsed        = parseISO(d.date);
-      const dateFormatted = format(parsed, 'dd/MM/yyyy');
-      const dayFormatted  = format(parsed, 'EEEE');
-      const availability  = deriveAvailability(cell);
-
-      // Look up the project this leave was filed under
-      const proj     = cell.project_id ? projById[cell.project_id] : null;
-      const projCell = proj?.cells?.[d.date];
-
-      const assigned     = projCell?.assigned_employees ?? 0;
-      const nonAvailable = (projCell?.employees_on_leave ?? 0) + (projCell?.partial_count ?? 0) * 0.5;
-      const impactPct    = assigned > 0 ? `${Math.round((nonAvailable / assigned) * 100)}%` : '';
-
-      rows.push({
-        date:             dateFormatted,
-        day:              dayFormatted,
-        employee_id:      emp.user_id,
-        employee_name:    emp.full_name,
-        role:             emp.role ?? '',
-        availability,
-        leave_type:       cell.leave_type        ?? '',
-        is_half_day:      cell.is_half_day ? 'Yes' : 'No',
-        half_day_session: cell.is_half_day ? (cell.half_day_session ?? '') : '',
-        project_name:     proj?.project_name     ?? '',
-        impact_pct:       impactPct,
-        risk_level:       projCell?.risk_level   ?? '',
-      });
-    }
-  }
-
-  return rows;
-}
-
-function deriveAvailability(cell) {
-  if (!cell) return 'AVAILABLE';
-  if (cell.leave_type === 'WFH' && cell.is_half_day) return 'PARTIALLY AVAILABLE (WFH)';
-  if (cell.leave_type === 'WFH') return 'WFH';
-  if (cell.is_half_day) return 'PARTIALLY AVAILABLE';
-  if (cell.leave_type) return 'ON LEAVE';
-  return 'AVAILABLE';
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sheet 2 — Project Risk Summary
-// One row per project × date where anyone is affected
-// ─────────────────────────────────────────────────────────────────────────────
-function buildProjRows(projData, dateStrip) {
-  const rows = [];
-
-  for (const proj of (projData.projects || [])) {
-    for (const d of dateStrip) {
-      const cell = proj.cells?.[d.date];
-      if (!cell) continue;
-
-      const assigned  = cell.assigned_employees  ?? 0;
-      const onLeave   = cell.employees_on_leave  ?? 0;
-      const wfh       = cell.wfh_count           ?? 0;
-      const partial   = cell.partial_count       ?? 0;
-      const available = cell.available_workforce ?? (assigned - onLeave - partial);
-
-      if (onLeave === 0 && wfh === 0 && partial === 0) continue;
-
-      // Impact % = (on_leave + partial) / assigned × 100
-      // WFH excluded — WFH employees are still working
-      const nonAvailable = onLeave + partial * 0.5;
-      const impactPct    = assigned > 0 ? Math.round((nonAvailable / assigned) * 100) : 0;
-
-      const parsed = parseISO(d.date);
-      rows.push({
-        project_name:        proj.project_name,
-        date:                format(parsed, 'dd/MM/yyyy'),
-        day:                 format(parsed, 'EEEE'),
-        required_workforce:  proj.required_workforce ?? '',
-        assigned_employees:  assigned,
-        employees_on_leave:  onLeave,
-        wfh_count:           wfh,
-        partial_count:       partial,
-        available_workforce: available,
-        impact_pct:          `${impactPct}%`,
-        risk_level:          cell.risk_level ?? '',
-      });
-    }
-  }
-
-  return rows;
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sheet 3 — Summary by Employee
-// ─────────────────────────────────────────────────────────────────────────────
-function buildSummaryRows(empData, dateStrip) {
-  const totals = {};
-
-  for (const emp of (empData.employees || [])) {
-    const key = emp.user_id;
-    if (!totals[key]) {
-      totals[key] = {
-        employee_id:   emp.user_id,
-        employee_name: emp.full_name,
-        role:          emp.role ?? '',
-        total_days:    0,
-        on_leave_days: 0,
-        wfh_days:      0,
-        partial_days:  0,
-        _dates:        new Set(),
-      };
-    }
-
-    for (const d of dateStrip) {
-      const cell = emp.cells?.[d.date];
-      if (!cell) continue;
-      if (totals[key]._dates.has(d.date)) continue;
-      totals[key]._dates.add(d.date);
-
-      const isWfh     = cell.leave_type === 'WFH' && !cell.is_half_day;
-      const isPartial = cell.is_half_day === true;
-      const isLeave   = cell.leave_type && cell.leave_type !== 'WFH' && !cell.is_half_day;
-      const dayCount  = isPartial ? 0.5 : 1;
-
-      totals[key].total_days    += dayCount;
-      if (isLeave)   totals[key].on_leave_days += 1;
-      if (isWfh)     totals[key].wfh_days      += 1;
-      if (isPartial) totals[key].partial_days  += 0.5;
-    }
-  }
-
-  return Object.values(totals).map(t => ({
-    employee_id:   t.employee_id,
-    employee_name: t.employee_name,
-    role:          t.role,
-    total_days:    t.total_days,
-    on_leave_days: t.on_leave_days,
-    wfh_days:      t.wfh_days,
-    partial_days:  t.partial_days,
-  }));
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sheet 4 — Filters Applied
-// ─────────────────────────────────────────────────────────────────────────────
-function buildFilterRows(filters) {
-  return [
-    { label: 'Start Date',     value: filters.start_date                                              || '—' },
-    { label: 'End Date',       value: filters.end_date                                                || '—' },
-    { label: 'Projects',       value: filters.project_ids?.length    ? filters.project_ids.join(', ')    : 'All' },
-    { label: 'Leave Types',    value: filters.leave_types?.length    ? filters.leave_types.join(', ')    : 'All' },
-    { label: 'Leave Statuses', value: filters.leave_statuses?.length ? filters.leave_statuses.join(', ') : 'All' },
-    { label: 'Exported At',    value: format(new Date(), 'dd/MM/yyyy HH:mm')                               },
-  ];
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-function appendSheet(wb, rows, columns, sheetName) {
-  const wsData = [
-    columns.map(c => c.header),
-    ...rows.map(r => columns.map(c => r[c.key] ?? '')),
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  applySheetStyling(ws, wsData);
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-}
-
-function applySheetStyling(ws, wsData) {
-  if (!wsData.length) return;
-  const colWidths = wsData[0].map((_, ci) =>
-    Math.min(50, Math.max(12, ...wsData.map(row => String(row[ci] ?? '').length + 2)))
-  );
-  ws['!cols']   = colWidths.map(w => ({ wch: w }));
-  ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activeCell: 'A2', sqref: 'A2' };
-}
-
 function buildFilename(filters) {
   const today = format(new Date(), 'yyyyMMdd');
   const start = filters.start_date ? `_${filters.start_date}` : '';
   const end   = filters.end_date   ? `_to_${filters.end_date}` : '';
-  return `Leave_Dashboard${start}${end}_exported_${today}.xlsx`;
+  return `Leave_Dashboard${start}${end}_${today}.xlsx`;
 }
