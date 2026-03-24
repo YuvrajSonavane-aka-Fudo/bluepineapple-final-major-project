@@ -1,4 +1,3 @@
-// src/components/dashboard/DetailPanel.jsx
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { format } from 'date-fns';
 import { fmt } from '../../utils/dateUtils';
@@ -125,7 +124,7 @@ export default function DetailPanel({ context, onClose, filters }) {
     </>
   );
 
-  // ── Mobile: bottom sheet ──
+  // Mobile: bottom sheet 
   if (isMobileView) {
     return (
       <>
@@ -194,7 +193,7 @@ export default function DetailPanel({ context, onClose, filters }) {
     );
   }
 
-  // ── Desktop: floating popup ──
+  // Desktop: floating popup 
   return (
     <>
       <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, zIndex: 200 }} />
@@ -237,7 +236,7 @@ function Row({ children }) {
   return <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1, py: 0.75, borderRadius: '6px', background: '#f8f9fb', border: '1px solid #eef0f3', mb: '3px' }}>{children}</Box>;
 }
 
-// WFH row — same base as Row but with left green accent border (V3 style)
+// WFH row — same base as Row but with left green accent border
 function WFHRow({ children }) {
   return (
     <Box sx={{
@@ -459,7 +458,7 @@ function DayView({ data }) {
         {/* Column divider */}
         <Box sx={{ background: '#f0f2f5', mx: 1, my: '1px', width: '1px', flexShrink: 0 }} />
 
-        {/* ── Right column: Affected projects (real absences only) ── */}
+        {/* Right column: Affected projects (real absences only) */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <Box sx={SCROLL_COL}>
             <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>

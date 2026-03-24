@@ -1,4 +1,3 @@
-// src/components/auth/LoginPage.jsx
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { Box, TextField, Button, Typography, CircularProgress, useMediaQuery } from '@mui/material';
@@ -55,7 +54,7 @@ export default function LoginPage() {
       <Box sx={{ position: 'absolute', top: '-10%', left: '15%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,91,219,0.15) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }} />
       <Box sx={{ position: 'absolute', bottom: '-10%', right: '5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,179,237,0.08) 0%, transparent 70%)', zIndex: 0, pointerEvents: 'none' }} />
 
-      {/* ── LEFT PANEL — hidden on mobile ── */}
+      {/* LEFT PANEL — hidden on mobile */}
       {!isMobile && (
         <Box sx={{ flex: '0 0 48%', height: '100vh', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 8 }}>
           <Box sx={{ maxWidth: 460, width: '100%', display: 'flex', flexDirection: 'column', gap: 4.5 }}>
@@ -129,7 +128,7 @@ export default function LoginPage() {
         </Box>
       )}
 
-      {/* ── RIGHT PANEL / Mobile full screen ── */}
+      {/* RIGHT PANEL- Mobile full screen  */}
       <Box sx={{
         flex: 1,
         display: 'flex',
