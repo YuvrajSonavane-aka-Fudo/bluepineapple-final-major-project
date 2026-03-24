@@ -326,7 +326,6 @@ The frontend expects the following shape from the backend:
 
 - **Sessions never expire.** The `sessions` table has no TTL. Add expiry logic before going to production.
 - **No logout endpoint.** Clearing `sessionStorage` removes the token client-side, but the server-side session row persists.
-- **Desktop only.** The layout is optimized for 1280px+ screens. No responsive breakpoints for mobile.
 - **No error boundaries.** If a component throws during render, the whole dashboard crashes. Consider wrapping panels in React error boundaries.
 - **Scroll sync is JS-driven.** For very large employee lists (100+ rows), setting `scrollLeft` on every row on every scroll tick may cause jank. Virtual scrolling would solve this.
 - **Rate limiting absent.** The `/connect` endpoint has no rate limit. Add throttling before exposing to the internet.
