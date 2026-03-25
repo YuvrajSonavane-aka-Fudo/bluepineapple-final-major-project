@@ -30,7 +30,7 @@ from .utils import (
 )
 
 
-# ── ENDPOINT 1 — POST /api/v1/connect ────────────────────────────────────────
+#  ENDPOINT 1 — POST /api/v1/connect 
 @api_view(["POST"])
 def connect(request):
     email = request.data.get("email", "").strip().lower()
@@ -45,7 +45,7 @@ def connect(request):
     return Response({"session_id": session_id, "user_id": user.id, "user_role": user.role})
 
 
-# ── ENDPOINT 2 — GET /api/v1/projects ────────────────────────────────────────
+# ENDPOINT 2 — GET /api/v1/projects 
 @api_view(["GET"])
 def projects(request):
     user = get_user_from_request(request)
@@ -56,7 +56,7 @@ def projects(request):
     return Response({"projects": [{"project_id": p.id, "project_name": p.project_name} for p in qs]})
 
 
-# ── ENDPOINT 3 — POST /api/v1/dashboard/employees ────────────────────────────
+# ENDPOINT 3 — POST /api/v1/dashboard/employees 
 @api_view(["POST"])
 def dashboard_employees(request):
     """
@@ -135,7 +135,7 @@ def dashboard_employees(request):
     })
 
 
-# ── ENDPOINT 4 — POST /api/v1/dashboard/projects ─────────────────────────────
+# ENDPOINT 4 — POST /api/v1/dashboard/projects 
 @api_view(["POST"])
 def dashboard_projects(request):
     """
@@ -191,7 +191,7 @@ def dashboard_projects(request):
         end_date__gte=start_date,
     ).exclude(project_id__in=accessible_ids)
 
-    # ── O(1) pre-expansion: (uid, project_id, date) → leave ─────────────────
+    # ── O(1) pre-expansion: (uid, project_id, date) → leave
     direct_on_date = {}
     for leave in scoped_leave_qs:
         d = leave.start_date
@@ -278,7 +278,7 @@ def dashboard_projects(request):
     })
 
 
-# ── ENDPOINT 5 — POST /api/v1/dashboard/employee-cell-details ────────────────
+# ENDPOINT 5 — POST /api/v1/dashboard/employee-cell-details 
 @api_view(["POST"])
 def employee_cell_details(request):
     user = get_user_from_request(request)
@@ -351,7 +351,7 @@ def employee_cell_details(request):
     return Response({"employee": {"user_id": employee.id, "full_name": employee.full_name}, "date": str(target_date), "projects": projects_payload})
 
 
-# ── ENDPOINT 6 — POST /api/v1/dashboard/project-cell-details ─────────────────
+# ENDPOINT 6 — POST /api/v1/dashboard/project-cell-details 
 @api_view(["POST"])
 def project_cell_details(request):
     user = get_user_from_request(request)
@@ -433,7 +433,7 @@ def project_cell_details(request):
     })
 
 
-# ── ENDPOINT 7 — POST /api/v1/dashboard/day-details ──────────────────────────
+# ENDPOINT 7 — POST /api/v1/dashboard/day-details 
 @api_view(["POST"])
 def day_details(request):
     """
