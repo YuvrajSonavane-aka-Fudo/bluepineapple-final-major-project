@@ -338,7 +338,7 @@ def dashboard_projects(request):
                 if leave is None:
                     continue
                 if leave.leave_type == "WFH" and leave.is_half_day:
-                    partial_count += 1
+                    partial_count += 0
                 elif leave.leave_type == "WFH":
                     wfh_count += 1
                 elif leave.is_half_day:
@@ -485,7 +485,7 @@ def employee_cell_details(request):
             entry = {
                 "project_id":       project.id,
                 "project_name":     project.project_name,
-                "availability":     "PARTIALLY_AVAILABLE",
+                "availability":     "AVAILABLE",
                 "leave_type":       "WFH",
                 "is_half_day":      True,
                 "half_day_session": leave.half_day_session,
@@ -653,7 +653,7 @@ def project_cell_details(request):
                 "user_id":          emp.id,
                 "full_name":        emp.full_name,
                 "role":             emp.role,
-                "availability":     "PARTIALLY_AVAILABLE",
+                "availability":     "AVAILABLE",
                 "leave_type":       "WFH",
                 "is_half_day":      True,
                 "half_day_session": leave.half_day_session,
@@ -884,7 +884,7 @@ def day_details(request):
 
         # Derive availability — consistent with endpoints 5 & 6
         if leave.leave_type == "WFH" and leave.is_half_day:
-            availability = "PARTIALLY_AVAILABLE"
+            availability = "AVAILABLE"
         elif leave.leave_type == "WFH":
             availability = "WFH"
         elif leave.is_half_day:
