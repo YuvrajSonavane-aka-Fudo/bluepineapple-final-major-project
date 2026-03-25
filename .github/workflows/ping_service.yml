@@ -1,0 +1,15 @@
+name: Ping Render Service
+
+on:
+  schedule:
+    # Runs every 5 minutes (the fastest allowed by GitHub Actions)
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # Allows you to run it manually for testing
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render URL
+        run: |
+          curl -I https://bluepineapple-final-major-project.onrender.com/

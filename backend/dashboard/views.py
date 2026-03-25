@@ -354,9 +354,9 @@ def dashboard_projects(request):
                 leave = get_effective_leave(uid, project.id, current)
                 if leave is None:
                     continue
-                # WFH (full or half day) = still working, goes to wfh_count only
-                # partial_count = only non-WFH half-day leaves (real absences)
-                if leave.leave_type == "WFH":
+                if leave.leave_type == "WFH" and leave.is_half_day:
+                    partial_count += 0
+                elif leave.leave_type == "WFH":
                     wfh_count += 1
                 elif leave.is_half_day:
                     partial_count += 1
@@ -503,7 +503,7 @@ def employee_cell_details(request):
             entry = {
                 "project_id":       project.id,
                 "project_name":     project.project_name,
-                "availability":     "PARTIALLY_AVAILABLE",
+                "availability":     "AVAILABLE",
                 "leave_type":       "WFH",
                 "is_half_day":      True,
                 "half_day_session": leave.half_day_session,
@@ -671,7 +671,7 @@ def project_cell_details(request):
                 "user_id":          emp.id,
                 "full_name":        emp.full_name,
                 "role":             emp.role,
-                "availability":     "PARTIALLY_AVAILABLE",
+                "availability":     "AVAILABLE",
                 "leave_type":       "WFH",
                 "is_half_day":      True,
                 "half_day_session": leave.half_day_session,
@@ -909,9 +909,10 @@ def day_details(request):
         leave     = any_leave_by_user[emp.id]
         spillover = emp.id in spillover_by_user and emp.id not in any_direct_leave_by_user
 
-        # WFH (full or half day) = WFH availability, never PARTIALLY_AVAILABLE
-        # PARTIALLY_AVAILABLE = only non-WFH half-day
-        if leave.leave_type == "WFH":
+        # Derive availability — consistent with endpoints 5 & 6
+        if leave.leave_type == "WFH" and leave.is_half_day:
+            availability = "AVAILABLE"
+        elif leave.leave_type == "WFH":
             availability = "WFH"
         elif leave.is_half_day:
             availability = "PARTIALLY_AVAILABLE"
