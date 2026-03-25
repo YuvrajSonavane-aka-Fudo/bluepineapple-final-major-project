@@ -72,7 +72,7 @@ export default function EmployeePanel({
     return () => el.removeEventListener('wheel', handler);
   }, [syncAll]);
 
-  // ── Touch scroll sync (mobile swipe) ──
+  //  Touch scroll sync (mobile swipe) 
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;

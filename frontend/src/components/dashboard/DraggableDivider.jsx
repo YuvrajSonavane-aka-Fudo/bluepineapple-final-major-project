@@ -43,7 +43,7 @@ export default function DraggableDivider({ onResize }) {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       sx={{
-        height: '6px',
+        height: '3px',
         flexShrink: 0,
         cursor: 'row-resize',
         background: '#e8eaed',

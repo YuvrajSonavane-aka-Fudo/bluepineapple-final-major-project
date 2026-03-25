@@ -41,7 +41,7 @@ export default function Dashboard() {
   const projScrollRef   = useRef(null);
   const headerScrollRef = useRef(null);
 
-  // ── Close legend when clicking/touching outside of it ──
+  //  Close legend when clicking/touching outside of it 
   useEffect(() => {
     if (!legendVisible) return;
     const handler = (e) => {
@@ -80,8 +80,9 @@ export default function Dashboard() {
     start_date:     fmt(startDate),
     end_date:       fmt(endDate),
     project_ids:    selectedProjIds,
-    leave_types:    leaveTypes,
+    leave_types:    leaveTypes.filter(t => t !== 'Half Day'),
     leave_statuses: leaveStatuses,
+    is_half_day:    leaveTypes.includes('Half Day') && leaveTypes.length === 1 ? true : null,
   }), [startDate, endDate, selectedProjIds, leaveTypes, leaveStatuses]);
 
   const fetchAll = useCallback(() => {
@@ -100,7 +101,11 @@ export default function Dashboard() {
       .finally(() => setLoadingProj(false));
   }, [buildBody, logout]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    setEmpData({ date_strip: [], employees: [] });
+    setProjData({ date_strip: [], projects: [] });
+    fetchAll();
+  }, [fetchAll]);
 
   const handleClear = () => {
     const r = getWeekRange();
@@ -119,51 +124,84 @@ export default function Dashboard() {
 
   // global search 
   const { filteredEmployees, filteredProjects } = useMemo(() => {
-  const q = globalSearch.trim().toLowerCase();
-  const allEmployees = empData.employees || [];
-  const allProjects  = projData.projects || [];
+    const q = globalSearch.trim().toLowerCase();
+    const allEmployees = empData.employees || [];
+    const allProjects  = projData.projects || [];
+    const hasAnyFilter = leaveTypes.length > 0 || leaveStatuses.length > 0;
 
-  if (!q) return { filteredEmployees: allEmployees, filteredProjects: allProjects };
+    // When any filter is active, narrow to only employees with non-null cells
+    // (API already returns filtered data, so non-null cell = matches the filter)
+    const activeEmployees = hasAnyFilter
+      ? allEmployees.filter(emp => Object.values(emp.cells || {}).some(c => c !== null))
+      : allEmployees;
 
-  const matchedEmps  = allEmployees.filter(e => e.full_name.toLowerCase().includes(q));
-  const matchedProjs = allProjects.filter(p => p.project_name.toLowerCase().includes(q));
+    // If filters active and NO employees match → both panels empty
+    if (hasAnyFilter && activeEmployees.length === 0) {
+      return { filteredEmployees: [], filteredProjects: [] };
+    }
 
-  // Nothing matched - both empty
-  if (matchedEmps.length === 0 && matchedProjs.length === 0) {
-    return { filteredEmployees: [], filteredProjects: [] };
-  }
-
-  // Both matched → show each panel's own matches only
-  if (matchedEmps.length > 0 && matchedProjs.length > 0) {
-    return { filteredEmployees: matchedEmps, filteredProjects: matchedProjs };
-  }
-
-  // Only employees matched - show matched employees + their assigned projects (empty if none)
-  if (matchedEmps.length > 0) {
-    const matchedEmpIds = new Set(matchedEmps.map(e => e.user_id));
-    const assignedProjects = allProjects.filter(p =>
-      (p.member_ids || []).some(uid => matchedEmpIds.has(uid))
+    // Default: show projects impacted by real absences OR whose members have WFH/leave cells
+    // This ensures WFH-only days still surface impacted projects on initial load
+    const empCellDates = new Set();
+    allEmployees.forEach(emp =>
+      Object.entries(emp.cells || {}).forEach(([date, cell]) => {
+        if (cell) empCellDates.add(`${emp.user_id}::${date}`);
+      })
     );
-    return {
-      filteredEmployees: matchedEmps,
-      filteredProjects: assignedProjects, // empty array = "nothing found" in project panel
-    };
-  }
+    const impactedProjects = allProjects.filter(p => {
+      // Has real project-level absence count
+      if (Object.values(p.cells || {}).some(cell => (cell?.employees_on_leave ?? 0) > 0)) return true;
+      // OR at least one member has any leave/WFH cell in the date range
+      return (p.member_ids || []).some(uid =>
+        [...empCellDates].some(key => key.startsWith(`${uid}::`))
+      );
+    });
 
-  // Only projects matched - show matched projects + their assigned employees (empty if none)
-  const matchedProjIds = new Set(matchedProjs.map(p => p.project_id));
-  const assignedEmployees = allEmployees.filter(e =>
-    allProjects.some(p =>
-      matchedProjIds.has(p.project_id) &&
-      (p.member_ids || []).includes(e.user_id)
-    )
-  );
-  return {
-    filteredEmployees: assignedEmployees, // empty array = "nothing found" in employee panel
-    filteredProjects: matchedProjs,
-  };
+    const activeProjects = hasAnyFilter
+      ? (() => {
+          const activeEmpIds = new Set(activeEmployees.map(e => e.user_id));
+          return allProjects.filter(p =>
+            (p.member_ids || []).some(uid => activeEmpIds.has(uid))
+          );
+        })()
+      : impactedProjects;
 
-}, [globalSearch, empData.employees, projData.projects]);
+    // No search → return filtered results directly
+    if (!q) return { filteredEmployees: activeEmployees, filteredProjects: activeProjects };
+
+    const matchedEmps  = activeEmployees.filter(e => e.full_name.toLowerCase().includes(q));
+    const matchedProjs = activeProjects.filter(p => p.project_name.toLowerCase().includes(q));
+
+    // Nothing matched → both empty
+    if (matchedEmps.length === 0 && matchedProjs.length === 0) {
+      return { filteredEmployees: [], filteredProjects: [] };
+    }
+
+    // Both matched → each panel shows only its own matches
+    if (matchedEmps.length > 0 && matchedProjs.length > 0) {
+      return { filteredEmployees: matchedEmps, filteredProjects: matchedProjs };
+    }
+
+    // Only employees matched → matched employees + their assigned projects (empty if none)
+    if (matchedEmps.length > 0) {
+      const matchedEmpIds = new Set(matchedEmps.map(e => e.user_id));
+      const assignedProjects = activeProjects.filter(p =>
+        (p.member_ids || []).some(uid => matchedEmpIds.has(uid))
+      );
+      return { filteredEmployees: matchedEmps, filteredProjects: assignedProjects };
+    }
+
+    // Only projects matched → matched projects + their assigned employees (empty if none)
+    const matchedProjIds = new Set(matchedProjs.map(p => p.project_id));
+    const assignedEmployees = activeEmployees.filter(e =>
+      activeProjects.some(p =>
+        matchedProjIds.has(p.project_id) &&
+        (p.member_ids || []).includes(e.user_id)
+      )
+    );
+    return { filteredEmployees: assignedEmployees, filteredProjects: matchedProjs };
+
+  }, [globalSearch, empData.employees, projData.projects, leaveTypes,leaveStatuses]);
 
   //  Auto-scroll to today on data load 
   useEffect(() => {
@@ -195,9 +233,20 @@ export default function Dashboard() {
     });
   });
 
+  // employeeCellsByDate: only real leave (non-WFH) drives date strip highlight
   const employeeCellsByDate = {};
   (empData.employees || []).forEach(emp => {
-    Object.entries(emp.cells || {}).forEach(([date, cell]) => { if (cell) employeeCellsByDate[date] = true; });
+    Object.entries(emp.cells || {}).forEach(([date, cell]) => {
+      if (cell && cell.leave_type !== 'WFH') employeeCellsByDate[date] = true;
+    });
+  });
+
+  // wfhCellsByDate: dates where at least one employee is WFH (still needs day view)
+  const wfhCellsByDate = {};
+  (empData.employees || []).forEach(emp => {
+    Object.entries(emp.cells || {}).forEach(([date, cell]) => {
+      if (cell && cell.leave_type === 'WFH') wfhCellsByDate[date] = true;
+    });
   });
 
   const makeCtx = (rect, extra, preferAbove) => ({
@@ -242,11 +291,16 @@ export default function Dashboard() {
               dateStrip={filteredDateStrip}
               projectCells={projectCellsByDate}
               employeeCells={employeeCellsByDate}
+              wfhCells={wfhCellsByDate}
               globalSearch={globalSearch}
               onGlobalSearchChange={setGlobalSearch}
               onDateClick={(date, rect) => {
                 const info = filteredDateStrip.find(d => d.date === date);
                 if (info?.is_weekend) return;
+                // Block only truly empty days — allow holidays, WFH days, and real leave/risk
+                const hasAnything = employeeCellsByDate[date] || projectCellsByDate[date]
+                  || wfhCellsByDate[date] || info?.is_public_holiday;
+                if (!hasAnything) return;
                 setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, false));
               }}
               scrollRef={headerScrollRef}
@@ -386,11 +440,16 @@ export default function Dashboard() {
             dateStrip={filteredDateStrip}
             projectCells={projectCellsByDate}
             employeeCells={employeeCellsByDate}
+            wfhCells={wfhCellsByDate}
             globalSearch={globalSearch}
             onGlobalSearchChange={setGlobalSearch}
             onDateClick={(date, rect) => {
               const info = filteredDateStrip.find(d => d.date === date);
               if (info?.is_weekend) return;
+              // Block only truly empty days — allow holidays, WFH days, and real leave/risk
+              const hasAnything = employeeCellsByDate[date] || projectCellsByDate[date]
+                || wfhCellsByDate[date] || info?.is_public_holiday;
+              if (!hasAnything) return;
               setDetailCtx(makeCtx(rect, { type: 'day', date: new Date(date) }, false));
             }}
             scrollRef={headerScrollRef}
