@@ -1,5 +1,3 @@
-// src/components/shared/LeaveCell.jsx
-// Pure inline styles — MUI cannot replicate clip-path triangle shapes pixel-perfectly
 export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
   const isWeekend = dateInfo?.is_weekend;
   const isHoliday = dateInfo?.is_public_holiday;

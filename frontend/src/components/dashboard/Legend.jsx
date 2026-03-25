@@ -74,7 +74,16 @@ export default function Legend({
   };
 
   return (
-    <Box sx={{ width: 220, minWidth: 220, background: '#fff', borderLeft: '1px solid #e5e7eb', py: 1.5 }}>
+    <Box
+      sx={{
+        width: { xs: '100%', md: 220 },
+        minWidth: { xs: '100%', md: 220 },
+        maxWidth: '100%',
+        background: '#fff',
+        borderLeft: { xs: 'none', md: '1px solid #e5e7eb' },
+        py: 1.5
+      }}
+    >
 
       {/* ── Filters + Export ── */}
       <Box sx={{ px: 1.75, pb: 1.75, borderBottom: '1px solid #e5e7eb' }}>

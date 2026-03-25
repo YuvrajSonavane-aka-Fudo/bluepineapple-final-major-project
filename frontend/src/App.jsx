@@ -1,4 +1,3 @@
-// src/App.jsx
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import LoginPage from './components/auth/LoginPage';
 import Dashboard from './components/dashboard/Dashboard';

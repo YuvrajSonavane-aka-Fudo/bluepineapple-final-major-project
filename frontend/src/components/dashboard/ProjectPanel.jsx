@@ -6,8 +6,6 @@ import RiskCell from '../shared/RiskCell';
 
 const CELL_W       = 35;
 const ROW_H        = 35;
-const FROZEN_W     = 300;
-const FROZEN_W_MOB = 140;
 const TODAY_BORDER = '#994545';
 
 function useIsMobile() {
@@ -33,7 +31,6 @@ function useFrozenWidth() {
 export default function ProjectPanel({
   dateStrip = [], projects = [], loading,
   globalSearch = '',
-  searchMode = 'EMP',
   onCellClick,
   scrollRef,
   headerScrollRef,
@@ -97,10 +94,8 @@ export default function ProjectPanel({
     };
   }, [syncAll]);
 
-  // Filter by global search (matches project name)
-  const filtered = projects.filter(p =>
-    searchMode !== 'PROJ' || !globalSearch || p.project_name.toLowerCase().includes(globalSearch.toLowerCase())
-  );
+  // projects are already pre-filtered by Dashboard's smart search
+  const filtered = projects;
 
   const todayIdx  = dateStrip.findIndex(d => isToday(parseISO(d.date)));
   const todayLeft = todayIdx >= 0 ? todayIdx * CELL_W : null;
@@ -162,7 +157,7 @@ function EmptyState({ searchValue }) {
   return (
     <Box sx={{ p: 5, textAlign: 'center' }}>
       <Typography sx={{ fontSize: 13, color: '#9aa0ad' }}>
-        {searchValue ? `No projects matching "${searchValue}"` : 'No projects to display'}
+        {searchValue ? `No results for "${searchValue}"` : 'No projects to display'}
       </Typography>
     </Box>
   );

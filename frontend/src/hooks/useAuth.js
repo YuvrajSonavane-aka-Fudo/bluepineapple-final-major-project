@@ -1,4 +1,3 @@
-// src/hooks/useAuth.js
 import { createContext, useContext, useState, useCallback } from 'react';
 import { loginWithEmail } from '../services/api';
 

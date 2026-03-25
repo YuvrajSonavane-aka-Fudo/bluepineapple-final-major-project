@@ -1,4 +1,3 @@
-// src/components/dashboard/Toolbar.jsx
 import { useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { fmt, getWeekRange, getMonthRange, getTodayRange, getYearRange, shiftRange } from '../../utils/dateUtils';
@@ -17,7 +16,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
-// ── Validation ───────────────────────────────────────────────────────────────
+// Validation
 // Returns an error message string if invalid, null if valid.
 function validateRange(start, end) {
   if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
@@ -74,7 +73,7 @@ export default function Toolbar({
     return arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
   };
 
-  // ── Safe range change — validates before calling onRangeChange ────────────
+  // Safe range change — validates before calling onRangeChange
   const handleRangeChange = (newStart, newEnd) => {
     const err = validateRange(newStart, newEnd);
     if (err) {
@@ -283,7 +282,7 @@ export default function Toolbar({
         </Box>
       </Box>
 
-      {/* ── Date validation error dialog ─────────────────────────────────── */}
+      {/*  Date validation error dialog */}
       <Dialog
         open={Boolean(dateError)}
         onClose={() => setDateError(null)}
@@ -320,7 +319,7 @@ export default function Toolbar({
         </DialogActions>
       </Dialog>
 
-      {/* ── Logout dialog ────────────────────────────────────────────────── */}
+      {/*  Logout dialog */}
       <Dialog open={showLogout} onClose={() => setShowLogout(false)} PaperProps={{ sx: { borderRadius: '16px', p: '8px', width: 300 } }}>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, pt: 3 }}>
           <Box sx={{ width: 54, height: 54, borderRadius: '50%', background: '#fff5f0', border: '1.5px solid #fcd9c8', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>

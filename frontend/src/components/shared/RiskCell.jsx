@@ -1,4 +1,3 @@
-// src/components/shared/RiskCell.jsx
 const RISK_COLORS = {
   HIGH:   'rgba(239,68,68,0.80)',
   MEDIUM: 'rgba(245,158,11,0.55)',

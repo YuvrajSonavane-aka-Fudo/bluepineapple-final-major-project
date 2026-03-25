@@ -1,4 +1,3 @@
-// src/components/dashboard/EmployeePanel.jsx
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { parseISO, isToday } from 'date-fns';
 import { Box, Typography } from '@mui/material';
@@ -6,8 +5,6 @@ import LeaveCell from '../shared/LeaveCell';
 
 const CELL_W       = 35;
 const ROW_H        = 35;
-const FROZEN_W     = 300;
-const FROZEN_W_MOB = 140;
 const TODAY_BORDER = '#994545';
 
 function useIsMobile() {
@@ -33,7 +30,6 @@ function useFrozenWidth() {
 export default function EmployeePanel({
   dateStrip = [], employees = [], loading,
   globalSearch = '',
-  searchMode = 'EMP',
   onCellClick,
   scrollRef,
   headerScrollRef,
@@ -98,11 +94,9 @@ export default function EmployeePanel({
     };
   }, [syncAll]);
 
-  const filtered = employees.filter(emp => {
-    if (searchMode === 'EMP' && globalSearch && !emp.full_name.toLowerCase().includes(globalSearch.toLowerCase())) return false;
-    if (!showAll) return Object.values(emp.cells || {}).some(c => c !== null);
-    return true;
-  });
+  const filtered = showAll
+    ? employees
+    : employees.filter(emp => Object.values(emp.cells || {}).some(c => c !== null));
 
   const todayIdx  = dateStrip.findIndex(d => isToday(parseISO(d.date)));
   const todayLeft = todayIdx >= 0 ? todayIdx * CELL_W : null;
@@ -190,7 +184,7 @@ function EmptyState({ searchValue }) {
   return (
     <Box sx={{ p: 5, textAlign: 'center' }}>
       <Typography sx={{ fontSize: 13, color: '#9aa0ad' }}>
-        {searchValue ? `No employees matching "${searchValue}"` : 'No leave records in this period'}
+        {searchValue ? `No results for "${searchValue}"` : 'No leave records in this period'}
       </Typography>
     </Box>
   );
