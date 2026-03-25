@@ -24,21 +24,28 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   if (isWeekend) cellBg = 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)';
   if (isHoliday && !isWeekend) cellBg = '#fefce8';
 
-  const risk    = cell?.risk_level        ?? null;
-  const onLeave = cell?.employees_on_leave ?? 0;
-  const wfh     = cell?.wfh_count          ?? 0;
-  const partial = cell?.partial_count      ?? 0;
+  const risk     = cell?.risk_level        ?? null;
+  const onLeave  = cell?.employees_on_leave ?? 0;
+  const partial  = cell?.partial_count      ?? 0;
 
-  const shouldHighlight = onLeave > 0 || wfh > 0 || partial > 0;
+  // Only highlight if there are REAL absences (on_leave or non-WFH partial)
+  // WFH never causes a highlight — those employees are still working
+  const shouldHighlight = onLeave > 0 || partial > 0;
   const showRiskColor   = !isWeekend && !isHoliday && risk !== null && shouldHighlight;
   const bg              = showRiskColor ? (RISK_COLORS[risk] || RISK_COLORS['LOW']) : cellBg;
 
-  const handleClick = (e) => { const rect = e.currentTarget.getBoundingClientRect(); onClick(rect); };
+  // Only clickable if the cell is highlighted (has real absences)
+  const isClickable = shouldHighlight && !isWeekend && !isHoliday;
+  const handleClick = (e) => {
+    if (!isClickable) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    onClick(rect);
+  };
 
   return (
     <div
-      onClick={cell ? handleClick : undefined}
-      style={{ ...sharedStyle, background: bg, cursor: cell ? 'pointer' : 'default' }}
+      onClick={isClickable ? handleClick : undefined}
+      style={{ ...sharedStyle, background: bg, cursor: isClickable ? 'pointer' : 'default' }}
     />
   );
 }

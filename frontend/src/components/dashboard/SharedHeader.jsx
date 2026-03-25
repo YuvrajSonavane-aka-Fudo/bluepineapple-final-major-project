@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { InputBase, Box, Typography } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DateStrip from './DateStrip';
+import { Tooltip } from '@mui/material';
 
 const HEADER_H = 40;
 const THUMB_H  = 3;
@@ -31,6 +32,7 @@ export default function SharedHeader({
   dateStrip = [],
   projectCells = {},
   employeeCells = {},
+  wfhCells = {},
   globalSearch,
   onGlobalSearchChange,
   onDateClick,
@@ -176,7 +178,7 @@ export default function SharedHeader({
 
     color: '#6b7280',
     p: 0,
-    zIndex: 5,
+    zIndex: 50,
 
     boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
     transition: 'all 0.2s ease',
@@ -202,7 +204,7 @@ export default function SharedHeader({
     strokeWidth="2.5"
     style={{
       transition: 'transform 0.2s ease',
-      transform: legendVisible ? 'rotate(180deg)' : 'rotate(0deg)'
+      transform: legendVisible ? 'rotate(0deg)' : 'rotate(180deg)'
     }}
   >
     <polyline points="9,18 15,12 9,6" />
@@ -217,9 +219,11 @@ export default function SharedHeader({
       }}>
         {/* On desktop show "ID" label; on mobile skip it to save space */}
         {!isMobile && (
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0 }}>
-            ID
-          </Typography>
+          <Tooltip title="Employee ID" arrow>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0 }}>
+              ID
+            </Typography>
+          </Tooltip>
         )}
         <Box sx={{
           flex: 1, display: 'flex', alignItems: 'center', gap: 0.5,
@@ -230,7 +234,7 @@ export default function SharedHeader({
         }}>
           <SearchIcon sx={{ fontSize: 13, color: '#9aa0ad', flexShrink: 0 }} />
           <InputBase
-            placeholder={isMobile ? 'Search…' : 'Search employees or projects…'}
+            placeholder={isMobile ? 'Search…' : 'Search Employee/Project'}
             value={globalSearch}
             onChange={e => onGlobalSearchChange(e.target.value)}
             sx={{ flex: 1, fontSize: isMobile ? 11 : 12, color: '#1a1f2e', minWidth: 0, '& input': { p: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" } }}
@@ -247,9 +251,11 @@ export default function SharedHeader({
         </Box>
         {/* L.C. label — hide on mobile, no room */}
         {!isMobile && (
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0, ml: 'auto', pr: 1 }}>
-            L.C.
-          </Typography>
+          <Tooltip title="Leave Count" arrow>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0, ml: 'auto', pr: 1 }}>
+              L.C.
+            </Typography>
+          </Tooltip>
         )}
       </Box>
 
@@ -269,6 +275,7 @@ export default function SharedHeader({
             onDateClick={onDateClick}
             projectCells={projectCells}
             employeeCells={employeeCells}
+            wfhCells={wfhCells}
           />
         </Box>
         <Box

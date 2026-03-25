@@ -19,7 +19,7 @@ const STATUSES = [
   { label: 'Rejected',         type: 'x' },
 ];
 const TIMELINE = [
-  { label: 'Current Day',    type: 'today' },
+  { label: 'Today',    type: 'today' },
   { label: 'Weekend',        type: 'weekend' },
   { label: 'Public Holiday', type: 'holiday' },
 ];
@@ -85,7 +85,7 @@ export default function Legend({
       }}
     >
 
-      {/* ── Filters + Export ── */}
+      {/*  Filters + Export  */}
       <Box sx={{ px: 1.75, pb: 1.75, borderBottom: '1px solid #e5e7eb' }}>
         <Typography component="p" sx={sectionTitle}>FILTERS</Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>

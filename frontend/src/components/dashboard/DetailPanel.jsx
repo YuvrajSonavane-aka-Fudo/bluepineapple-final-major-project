@@ -253,10 +253,10 @@ function WFHRow({ children }) {
 }
 
 function Avail({ hasLeave, isHalfDay, leaveType }) {
-  if (!hasLeave)           return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#16a34a' }}>Available</Typography>;
-  if (isHalfDay)           return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#d97706' }}>Partial</Typography>;
-  if (leaveType === 'WFH') return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#059669' }}>WFH</Typography>;
-  return                          <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#dc2626' }}>Unavailable</Typography>;
+  if (!hasLeave)                          return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#16a34a' }}>Available</Typography>;
+  if (leaveType === 'WFH')               return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#059669' }}>WFH</Typography>;
+  if (isHalfDay)                          return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#d97706' }}>Partial</Typography>;
+  return                                         <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#dc2626' }}>Unavailable</Typography>;
 }
 
 function RiskTag({ risk }) {
@@ -290,7 +290,11 @@ function EmployeeView({ data, leaveStatus }) {
                   <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
                     <Dot color={LEAVE_COLORS[p.leave_type] || '#9aa0ad'} />
                     <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
-                      {p.is_half_day ? `Partial · ${p.half_day_session || p.leave_type}` : p.leave_type}
+                      {p.leave_type === 'WFH'
+                        ? 'WFH'
+                        : p.is_half_day
+                          ? `Partial · ${p.half_day_session || p.leave_type}`
+                          : p.leave_type}
                     </Typography>
                   </Box>
                 )}
@@ -311,7 +315,7 @@ function ProjectView({ data }) {
   const onLeave      = project.on_leave_count ?? 0;
   const available    = project.available_workforce ?? 0;
 
-  const partialOut = emps.filter(e => e?.is_half_day);
+  const partialOut = emps.filter(e => e?.is_half_day && e?.leave_type !== 'WFH');
   const wfhOnly    = emps.filter(e => e?.leave_type === 'WFH');
   const fullyOut   = emps.filter(e => e?.leave_type && e?.leave_type !== 'WFH' && !e?.is_half_day);
 
@@ -361,18 +365,22 @@ function ProjectView({ data }) {
 }
 
 function DayView({ data }) {
-  const allEmps     = data?.employees_on_leave || [];
-  const projects    = (data?.projects || []).filter(p => p.employees_on_leave > 0);
-  const dateMeta    = data?.date || {};
-  const holidayName = dateMeta.is_public_holiday ? dateMeta.holiday_name : null;
+  const allEmps        = data?.employees_on_leave || [];
+  const allProjects    = data?.projects || [];
+  const dateMeta       = data?.date || {};
+  const holidayName    = dateMeta.is_public_holiday ? dateMeta.holiday_name : null;
 
-  // Split employees into actual leave vs WFH using the availability field from backend
+  // Left column: split employees into real absences vs WFH
   const onLeaveEmps = allEmps.filter(e => e.availability !== 'WFH');
   const wfhEmps     = allEmps.filter(e => e.availability === 'WFH');
 
+  // Right column: affected = real absences; wfh impacted = WFH only
+  const affectedProjects   = allProjects.filter(p => (p.employees_on_leave ?? 0) > 0);
+  const wfhImpactedProjects = allProjects.filter(p => p.is_wfh_impacted === true);
+
   const SCROLL_COL = {
     overflowY: 'auto',
-    maxHeight: 220,
+    maxHeight: 260,
     flex: 1,
     minHeight: 0,
     pr: '2px',
@@ -381,7 +389,6 @@ function DayView({ data }) {
     '&::-webkit-scrollbar-thumb': { background: '#dde0e6', borderRadius: '99px' },
   };
 
-  // SectionLabel needs to be sticky inside the scroll column
   const STICKY_LABEL = {
     fontSize: 9, fontWeight: 700, color: '#b0b6c3',
     letterSpacing: '0.7px', textTransform: 'uppercase',
@@ -404,15 +411,14 @@ function DayView({ data }) {
 
       <Box sx={{ display: 'flex', minHeight: 0 }}>
 
-        {/* ── Left column: On Leave + WFH ── */}
+        {/* ── Left column: On Leave + WFH employees ── */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <Box sx={SCROLL_COL}>
 
-            {/* On Leave section */}
+            {/* ON LEAVE section */}
             <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>
               ON LEAVE ({onLeaveEmps.length})
             </Typography>
-
             {onLeaveEmps.length === 0
               ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>None.</Typography>
               : onLeaveEmps.map(emp => (
@@ -433,7 +439,7 @@ function DayView({ data }) {
                 ))
             }
 
-            {/* WFH section — only shown if there are WFH employees */}
+            {/* WFH section */}
             {wfhEmps.length > 0 && (
               <>
                 <Box sx={{ height: '0.5px', background: '#eef0f3', my: '6px' }} />
@@ -458,30 +464,50 @@ function DayView({ data }) {
         {/* Column divider */}
         <Box sx={{ background: '#f0f2f5', mx: 1, my: '1px', width: '1px', flexShrink: 0 }} />
 
-        {/* Right column: Affected projects (real absences only) */}
+        {/* ── Right column: Affected projects + WFH impacted projects ── */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <Box sx={SCROLL_COL}>
-            <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>
-              AFFECTED ({projects.length})
-            </Typography>
 
-            {projects.length === 0
+            {/* AFFECTED — real absences */}
+            <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>
+              AFFECTED ({affectedProjects.length})
+            </Typography>
+            {affectedProjects.length === 0
               ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>None.</Typography>
-              : projects.map(p => {
-                  const risk = p.risk_level || 'LOW';
-                  return (
-                    <Row key={p.project_id}>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{p.project_name}</Typography>
-                        <Typography sx={{ fontSize: 10, color: '#9aa0ad', mt: '2px' }}>
-                          {p.employees_on_leave} of {p.assigned_employees} on leave
-                        </Typography>
-                      </Box>
-                      <RiskTag risk={risk} />
-                    </Row>
-                  );
-                })
+              : affectedProjects.map(p => (
+                  <Row key={p.project_id}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{p.project_name}</Typography>
+                      <Typography sx={{ fontSize: 10, color: '#9aa0ad', mt: '2px' }}>
+                        {p.employees_on_leave} of {p.assigned_employees} on leave
+                      </Typography>
+                    </Box>
+                    <RiskTag risk={p.risk_level || 'LOW'} />
+                  </Row>
+                ))
             }
+
+            {/* WFH IMPACTED — projects with WFH only (no real absence) */}
+            {wfhImpactedProjects.length > 0 && (
+              <>
+                <Box sx={{ height: '0.5px', background: '#eef0f3', my: '6px' }} />
+                <Typography sx={STICKY_LABEL}>
+                  WFH IMPACTED ({wfhImpactedProjects.length})
+                </Typography>
+                {wfhImpactedProjects.map(p => (
+                  <WFHRow key={p.project_id}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{p.project_name}</Typography>
+                      <Typography sx={{ fontSize: 10, color: '#9aa0ad', mt: '2px' }}>
+                        {p.assigned_employees} assigned · remote only
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#059669' }}>WFH</Typography>
+                  </WFHRow>
+                ))}
+              </>
+            )}
+
           </Box>
         </Box>
 

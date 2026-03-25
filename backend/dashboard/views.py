@@ -125,7 +125,8 @@ def dashboard_employees(request):
         return Response({"error": "end_date must be on or after start_date."}, status=400)
 
     leave_types = request.data.get("leave_types",[])  
-    leave_statuses = request.data.get("leave_statuses",[])  
+    leave_statuses = request.data.get("leave_statuses",[]) 
+    is_half_day = request.data.get("is_half_day", None) 
     requested_pids = request.data.get("project_ids",[])
 
     accessible_ids = get_accessible_project_ids(user)
@@ -144,14 +145,14 @@ def dashboard_employees(request):
     ).order_by("full_name")
 
     leave_qs = LeaveApplication.objects.filter(
-        user__in = employees,
-        project_id__in = scoped_pids,
-        
+        user__in = employees,    
         start_date__lte = end_date,
         end_date__gte = start_date,
     )
 
     leave_qs = apply_leave_filters(leave_qs , leave_types , leave_statuses)
+    if str(is_half_day).lower() == "true" :
+        leave_qs = leave_qs.filter(is_half_day=True)
 
     leaves_by_user = {}
     for leave in leave_qs:
@@ -159,18 +160,34 @@ def dashboard_employees(request):
 
     employee_data = []
     for emp in employees:
-        emp_leaves = leaves_by_user.get(emp.id , [])
+        emp_leaves = leaves_by_user.get(emp.id, [])
         cells = {}
         current = start_date
         while current <= end_date:
-            leave_today = next(
-                (l for l in emp_leaves if l.start_date <= current <= l.end_date),
-                None,
-            )
-            cell = build_cell_payload(leave_today)
-            if leave_today and cell:
-                cell['project_id'] = leave_today.project_id
-            cells[str(current)] = cell
+            # Collect ALL leaves covering this date (split half-day = two records)
+            leaves_today = [l for l in emp_leaves if l.start_date <= current <= l.end_date]
+
+            if not leaves_today:
+                cells[str(current)] = None
+            elif len(leaves_today) == 1:
+                leave_today = leaves_today[0]
+                cell = build_cell_payload(leave_today)
+                if cell:
+                    cell['project_id'] = leave_today.project_id
+                cells[str(current)] = cell
+            else:
+                # Split day: two half-day leaves (e.g. Paid AM + WFH PM)
+                # Primary = non-WFH (the real absence); secondary = WFH half
+                non_wfh = [l for l in leaves_today if l.leave_type != "WFH"]
+                wfh_lst = [l for l in leaves_today if l.leave_type == "WFH"]
+                primary   = non_wfh[0] if non_wfh else leaves_today[0]
+                secondary = wfh_lst[0] if wfh_lst else leaves_today[1]
+                cell = build_cell_payload(primary)
+                if cell:
+                    cell['project_id'] = primary.project_id
+                    cell['secondary']  = build_cell_payload(secondary)
+                cells[str(current)] = cell
+
             current += timedelta(days=1)
 
         employee_data.append(
@@ -337,15 +354,16 @@ def dashboard_projects(request):
                 leave = get_effective_leave(uid, project.id, current)
                 if leave is None:
                     continue
-                if leave.leave_type == "WFH" and leave.is_half_day:
-                    partial_count += 1
-                elif leave.leave_type == "WFH":
+                # WFH (full or half day) = still working, goes to wfh_count only
+                # partial_count = only non-WFH half-day leaves (real absences)
+                if leave.leave_type == "WFH":
                     wfh_count += 1
                 elif leave.is_half_day:
                     partial_count += 1
                 else:
                     on_leave_count += 1
 
+            # WFH never reduces availability; partial (non-WFH half-day) does
             available = assigned_count - on_leave_count - partial_count
             cells[str(current)] = {
                 "assigned_employees":  assigned_count,
@@ -843,8 +861,9 @@ def day_details(request):
         return spillover_by_user.get(uid)
 
     # ── Build project summaries ──────────────────────────────────────────────
-    projects_payload = []
-    affected_pids    = set()
+    projects_payload     = []
+    affected_pids        = set()   # projects with real absences
+    wfh_impacted_pids    = set()   # projects with WFH only (no real absence)
 
     for project in projects_qs:
         member_ids     = project_members.get(project.id, set())
@@ -852,14 +871,21 @@ def day_details(request):
 
         # Only count actual absences — WFH is excluded from on_leave_count and risk
         on_leave_count = 0
+        has_wfh        = False
         for uid in member_ids:
             leave = get_effective_leave_for_user(uid, project.id)
-            if leave is not None and leave.leave_type != "WFH":
+            if leave is None:
+                continue
+            if leave.leave_type == "WFH":
+                has_wfh = True
+            else:
                 on_leave_count += 1
 
         available = assigned_count - on_leave_count
         if on_leave_count > 0:
             affected_pids.add(project.id)
+        elif has_wfh:
+            wfh_impacted_pids.add(project.id)
 
         projects_payload.append({
             "project_id":          project.id,
@@ -869,6 +895,7 @@ def day_details(request):
             "employees_on_leave":  on_leave_count,   # WFH excluded
             "available_workforce": available,
             "risk_level":          calculate_risk_level(project, assigned_count, available),
+            "is_wfh_impacted":     has_wfh and on_leave_count == 0,
         })
 
     # ── Build employees list (leave + WFH) ───────────────────────────────────
@@ -882,10 +909,9 @@ def day_details(request):
         leave     = any_leave_by_user[emp.id]
         spillover = emp.id in spillover_by_user and emp.id not in any_direct_leave_by_user
 
-        # Derive availability — consistent with endpoints 5 & 6
-        if leave.leave_type == "WFH" and leave.is_half_day:
-            availability = "PARTIALLY_AVAILABLE"
-        elif leave.leave_type == "WFH":
+        # WFH (full or half day) = WFH availability, never PARTIALLY_AVAILABLE
+        # PARTIALLY_AVAILABLE = only non-WFH half-day
+        if leave.leave_type == "WFH":
             availability = "WFH"
         elif leave.is_half_day:
             availability = "PARTIALLY_AVAILABLE"
@@ -928,7 +954,7 @@ def day_details(request):
     # summary counts only real absences — WFH excluded
     actual_on_leave_count = sum(
         1 for e in employees_on_leave_payload
-        if e["availability"] != "WFH"
+        if e["availability"] not in ("WFH",)
     )
 
     return Response({
