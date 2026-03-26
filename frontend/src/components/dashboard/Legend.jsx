@@ -29,9 +29,6 @@ const RISK_LEVELS = [
   { label: 'High Risk',   bg: 'rgba(239,68,68,0.80)',  border: 'rgba(239,68,68,0.9)'  },
 ];
 
-// Representative colour for status swatches — uses Paid blue to match the grid
-const STATUS_SWATCH_COLOR = '#2563EB';
-
 const sectionTitle = { fontSize: 10, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', pt: 1.25, pb: 1, m: 0 };
 const labelSx = { fontSize: 12, color: '#4B5563' };
 const swatchBase = { width: 20, height: 16, borderRadius: '3px', flexShrink: 0 };
@@ -66,7 +63,7 @@ function Swatch({ item }) {
       </Box>
     );
   }
-  // Pending: leave colour fill + dotted border overlay (matches LeaveCell pending style)
+  // Pending: dotted border overlay 
   if (type === 'pending') {
     return (
       <Box sx={{ ...swatchBase,  position: 'relative' }} />
