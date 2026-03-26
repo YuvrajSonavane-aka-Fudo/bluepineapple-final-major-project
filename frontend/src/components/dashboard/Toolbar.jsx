@@ -328,7 +328,7 @@ export default function Toolbar({
   const [dateError,        setDateError]        = useState(null);
   const [lastQuickFilter,  setLastQuickFilter]  = useState(null);
 
-  const ALL_STATUSES = ['Approved', 'Pending', 'Rejected'];
+  const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
   const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
 
   const getActiveFilter = () => {

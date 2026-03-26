@@ -1,4 +1,8 @@
-const LEAVE_COLOR = { 'Paid': '#2563EB', 'Unpaid': '#93C5FD', 'WFH': '#59be68' };
+const LEAVE_COLOR = {
+  'Paid':       '#2563EB',
+  'Unpaid':     '#93C5FD',
+  'WFH':        '#59be68',
+};
 
 function getColor(leaveType) {
   return LEAVE_COLOR[leaveType] ?? '#2563EB';
@@ -12,24 +16,22 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
   const session   = cell?.half_day_session;
   const isPending  = hasLeave && cell?.leave_status === 'Pending';
   const isRejected = hasLeave && cell?.leave_status === 'Rejected';
-  const isWFH      = hasLeave && leaveType === 'WFH';
+  const isCancelled = hasLeave && cell?.leave_status === 'Cancelled';
   const isHalfDay  = hasLeave && cell?.is_half_day;
 
-  // Secondary cell for split half-day (e.g. Paid first half + WFH second half)
-  const secondary     = cell?.secondary ?? null;
-  const hasSplit      = hasLeave && secondary !== null;
-  const secLeaveType  = secondary?.leave_type;
+  const secondary    = cell?.secondary ?? null;
+  const hasSplit     = hasLeave && secondary !== null;
+  const secLeaveType = secondary?.leave_type;
 
   let cellBg = '#ffffff';
   if (isWeekend) cellBg = 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)';
   if (isHoliday && !isWeekend) cellBg = '#fefce8';
 
-  const nb = '1px solid #e8eaed';
+  const nb        = '1px solid #e8eaed';
   const baseColor = getColor(leaveType);
   const secColor  = getColor(secLeaveType);
 
-  // Only clickable if there is actual leave content
-  const isClickable = hasLeave && !isRejected;
+  const isClickable = hasLeave && (!isRejected || !isCancelled);
   const handleClick = (e) => {
     if (!isClickable) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -51,73 +53,115 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
         zIndex: hasLeave ? 2 : 'auto',
       }}
     >
-      {/* ── SPLIT HALF-DAY: two triangles (primary + secondary) ── */}
-      {hasSplit && !isRejected && !isPending && (
+      {/* ── SPLIT HALF-DAY APPROVED ── */}
+      {hasSplit && (!isRejected || !isCancelled) && !isPending && (
         <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
-          {/* Primary (non-WFH) triangle — top-left */}
           <div style={{
-            position: 'absolute', inset: 0,
-            background: baseColor,
-            clipPath: session === 'Second Half'
-              ? 'polygon(100% 0,100% 100%,0 100%)'
-              : 'polygon(0 0,100% 0,0 100%)',
+            position: 'absolute', inset: 0, background: baseColor,
+            clipPath: session === 'Second Half' ? 'polygon(100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,0 100%)',
           }} />
-          {/* Secondary (WFH) triangle — bottom-right */}
           <div style={{
-            position: 'absolute', inset: 0,
-            background: secColor,
-            clipPath: session === 'Second Half'
-              ? 'polygon(0 0,100% 0,0 100%)'
-              : 'polygon(100% 0,100% 100%,0 100%)',
+            position: 'absolute', inset: 0, background: secColor,
+            clipPath: session === 'Second Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
           }} />
         </div>
       )}
 
-      {/* ── FULL LEAVE (non-half, non-WFH, non-split) ── */}
-      {hasLeave && !hasSplit && !isHalfDay && !isRejected && !isPending && !isWFH && (
+      {/* ── SPLIT HALF-DAY PENDING: triangles + dotted overlay ── */}
+      {hasSplit && isPending && (
+        <>
+          <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', inset: 0, background: baseColor,
+              clipPath: session === 'Second Half' ? 'polygon(100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,0 100%)',
+            }} />
+            <div style={{
+              position: 'absolute', inset: 0, background: secColor,
+              clipPath: session === 'Second Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
+            }} />
+          </div>
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none', color:"#F59E0B", fontWeight:700, fontSize:22 }}>!</div>
+        </>
+      )}
+
+      {/* ── SPLIT HALF-DAY REJECTED: triangles + cross overlay ── */}
+      {hasSplit && (isRejected || isCancelled) && (
+        <>
+          <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', inset: 0, background: baseColor,
+              clipPath: session === 'Second Half' ? 'polygon(100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,0 100%)',
+            }} />
+            <div style={{
+              position: 'absolute', inset: 0, background: secColor,
+              clipPath: session === 'Second Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
+            }} />
+          </div>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </div>
+        </>
+      )}
+
+      {/* ── FULL LEAVE APPROVED ── */}
+      {hasLeave && !hasSplit && !isHalfDay && (!isRejected || !isCancelled) && !isPending && (
         <div style={{ position: 'absolute', inset: 0.2, background: baseColor }} />
       )}
 
-      {/* ── WFH full day ── */}
-      {hasLeave && !hasSplit && !isHalfDay && !isRejected && !isPending && isWFH && (
-        <div style={{ position: 'absolute', inset: 0.2, background: baseColor }} />
+      {/* ── FULL LEAVE PENDING: colour fill + dotted border ── */}
+      {hasLeave && !hasSplit && !isHalfDay && isPending && (
+        <>
+          <div style={{ position: 'absolute', inset: 0.2, background: baseColor }} />
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none', color:"#F59E0B", fontWeight:700, fontSize:22 }}>!</div>
+        </>
       )}
 
-      {/* ── PENDING (non-half) ── */}
-      {hasLeave && !hasSplit && !isHalfDay && !isWFH && !isRejected && isPending && (
-        <div style={{ position: 'absolute', inset: 0.2, border: '2px dashed #994545', background: 'transparent' }} />
+      {/* ── FULL LEAVE REJECTED/CANCELLED: colour fill + cross ── */}
+      {hasLeave && !hasSplit && !isHalfDay && (isRejected || isCancelled) && (
+        <>
+          <div style={{ position: 'absolute', inset: 0.2, background: baseColor }} />
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </div>
+        </>
       )}
 
-      {/* ── REJECTED ── */}
-      {hasLeave && !hasSplit && isRejected && !isHalfDay && (
-        <div style={{ position: 'absolute', inset: 0.2, background: '#fff1f2', border: '1px solid #fecdd3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </div>
-      )}
-
-      {/* ── HALF-DAY (single leave, non-split) ── */}
-      {hasLeave && !hasSplit && isHalfDay && !isRejected && !isPending && (
+      {/* ── HALF-DAY APPROVED ── */}
+      {hasLeave && !hasSplit && isHalfDay && (!isRejected || !isCancelled) && !isPending && (
         <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
           <div style={{
-            position: 'absolute', inset: 0,
-            background: baseColor,
-            clipPath: session === 'First Half'
-              ? 'polygon(0 0,100% 0,0 100%)'
-              : 'polygon(100% 0,100% 100%,0 100%)',
+            position: 'absolute', inset: 0, background: baseColor,
+            clipPath: session === 'First Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
           }} />
         </div>
       )}
 
-      {/* ── HALF-DAY PENDING ── */}
+      {/* HALF-DAY PENDING: colour triangle + bang */}
       {hasLeave && !hasSplit && isHalfDay && isPending && (
-        <div style={{ position: 'absolute', inset: 0.2, border: '2px dashed #994545', background: 'transparent' }} />
+        <>
+          <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', inset: 0, background: baseColor,
+              clipPath: session === 'First Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
+            }} />
+          </div>
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none', color:"#F59E0B", fontWeight:700, fontSize:22 }}>!</div>
+        </>
       )}
 
-      {/* ── HALF-DAY REJECTED ── */}
-      {hasLeave && !hasSplit && isHalfDay && isRejected && (
-        <div style={{ position: 'absolute', inset: 0.2, background: '#fff1f2', border: '1px solid #fecdd3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </div>
+      {/* ── HALF-DAY REJECTED: colour triangle + cross ── */}
+      {hasLeave && !hasSplit && isHalfDay && (isRejected || isCancelled) && (
+        <>
+          <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', inset: 0, background: baseColor,
+              clipPath: session === 'First Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
+            }} />
+          </div>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </div>
+        </>
       )}
     </div>
   );

@@ -15,11 +15,11 @@ const DAY_PORTION = [
 ];
 const STATUSES = [
   { label: 'Approved',         type: 'check' },
-  { label: 'Pending Approval', type: 'dashed' },
-  { label: 'Rejected',         type: 'x' },
+  { label: 'Pending Approval', type: 'pending' },
+  { label: 'Rejected / Cancelled',         type: 'rejected' },
 ];
 const TIMELINE = [
-  { label: 'Today',    type: 'today' },
+  { label: 'Today',          type: 'today' },
   { label: 'Weekend',        type: 'weekend' },
   { label: 'Public Holiday', type: 'holiday' },
 ];
@@ -35,15 +35,59 @@ const swatchBase = { width: 20, height: 16, borderRadius: '3px', flexShrink: 0 }
 
 function Swatch({ item }) {
   const { type } = item;
-  if (type === 'block')   return <Box sx={{ ...swatchBase, background: '#2563EB' }} />;
-  if (type === 'half-am') return <Box sx={{ ...swatchBase, border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}><Box sx={{ position: 'absolute', inset: 0, background: '#2563EB', clipPath: 'polygon(0 0,100% 0,0 100%)' }} /></Box>;
-  if (type === 'half-pm') return <Box sx={{ ...swatchBase, border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}><Box sx={{ position: 'absolute', inset: 0, background: '#2563EB', clipPath: 'polygon(100% 0,100% 100%,0 100%)' }} /></Box>;
-  if (type === 'check')   return <Box sx={{ ...swatchBase, background: '#ECFDF5', border: '1px solid #86EFAC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg></Box>;
-  if (type === 'dashed')  return <Box sx={{ ...swatchBase, border: '2px dashed #F59E0B', background: 'transparent' }} />;
-  if (type === 'x')       return <Box sx={{ ...swatchBase, background: '#FEF2F2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg></Box>;
+
+  // Day portion swatches
+  if (type === 'block') {
+    return <Box sx={{ ...swatchBase, background: '#2563EB' }} />;
+  }
+  if (type === 'half-am') {
+    return (
+      <Box sx={{ ...swatchBase, border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}>
+        <Box sx={{ position: 'absolute', inset: 0, background: '#2563EB', clipPath: 'polygon(0 0,100% 0,0 100%)' }} />
+      </Box>
+    );
+  }
+  if (type === 'half-pm') {
+    return (
+      <Box sx={{ ...swatchBase, border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}>
+        <Box sx={{ position: 'absolute', inset: 0, background: '#2563EB', clipPath: 'polygon(100% 0,100% 100%,0 100%)' }} />
+      </Box>
+    );
+  }
+
+  // Status swatches — consistent with LeaveCell and DetailPanel StatusIcon
+  if (type === 'check') {
+    return (
+      <Box sx={{ ...swatchBase,  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+      </Box>
+    );
+  }
+  // Pending: dotted border overlay 
+  if (type === 'pending') {
+  return (
+    <Box sx={{ ...swatchBase, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',}}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M12 5v9" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round"/>
+        <circle cx="12" cy="18" r="1.5" fill="#F59E0B"/>
+      </svg>
+    </Box>
+  );
+}
+  // Rejected: leave colour fill + red cross overlay (matches LeaveCell rejected style)
+  if (type === 'rejected') {
+    return (
+      <Box sx={{ ...swatchBase,  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </Box>
+    );
+  }
+
+  // Timeline swatches
   if (type === 'today')   return <Box sx={{ ...swatchBase, border: '2px solid #994545' }} />;
   if (type === 'weekend') return <Box sx={{ ...swatchBase, background: 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)' }} />;
   if (type === 'holiday') return <Box sx={{ ...swatchBase, background: '#FEFCE8', border: '1px solid #FDE68A' }} />;
+
   return null;
 }
 
@@ -85,7 +129,7 @@ export default function Legend({
       }}
     >
 
-      {/*  Filters + Export  */}
+      {/* Filters + Export */}
       <Box sx={{ px: 1.75, pb: 1.75, borderBottom: '1px solid #e5e7eb' }}>
         <Typography component="p" sx={sectionTitle}>FILTERS</Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
@@ -108,7 +152,7 @@ export default function Legend({
             </Box>
           ))}
 
-          {/* Export button — sits right below the 2 filter toggles */}
+          {/* Export button */}
           <Button
             onClick={handleExport}
             disabled={exporting}

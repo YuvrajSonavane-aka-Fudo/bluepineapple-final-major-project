@@ -369,7 +369,7 @@ export default function MobileToolbar({
   const [showLogout,     setShowLogout]     = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  const ALL_STATUSES = ['Approved', 'Pending', 'Rejected'];
+  const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
   const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
 
   const isSameD = (d1, d2) => d1?.toDateString?.() === d2?.toDateString?.();
