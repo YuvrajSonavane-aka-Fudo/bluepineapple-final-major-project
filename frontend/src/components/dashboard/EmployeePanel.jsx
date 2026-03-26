@@ -72,7 +72,7 @@ export default function EmployeePanel({
     return () => el.removeEventListener('wheel', handler);
   }, [syncAll]);
 
-  //  Touch scroll sync (mobile swipe) 
+  // Touch scroll sync (mobile swipe)
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -109,7 +109,12 @@ export default function EmployeePanel({
           : filtered.length === 0
             ? <EmptyState searchValue={globalSearch} />
             : filtered.map((emp, idx) => {
-                const leaveCount = Object.values(emp.cells || {}).filter(c => c !== null).length;
+                // Only count Approved leaves in the badge —
+                // Pending and Rejected do not affect actual availability
+                const leaveCount = Object.values(emp.cells || {}).filter(
+                  c => c !== null && c?.leave_status === 'Approved'
+                ).length;
+
                 return (
                   <Box key={emp.user_id} sx={{ display: 'flex', alignItems: 'stretch' }}>
                     {/* Frozen label */}
@@ -120,7 +125,6 @@ export default function EmployeePanel({
                       borderBottom: '1px solid #e8eaed', flexShrink: 0, gap: isMobile ? 0.5 : 1,
                       height: ROW_H, boxSizing: 'border-box',
                     }}>
-                      {/* ID — hide on mobile if too cramped, show smaller */}
                       <Typography sx={{
                         fontSize: isMobile ? 9 : 11,
                         color: '#9aa0ad', fontFamily: "'DM Mono', monospace",
