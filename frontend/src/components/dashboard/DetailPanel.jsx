@@ -70,6 +70,26 @@ export default function DetailPanel({ context, onClose, filters }) {
 
   useEffect(() => {
     if (!context) return;
+
+    const handleClickOutside = (e) => {
+      // If click is inside panel → ignore
+      if (panelRef.current && panelRef.current.contains(e.target)) {
+        return;
+      }
+
+      // Otherwise → close panel
+      onClose();
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [context, onClose]);
+
+  useEffect(() => {
+    if (!context) return;
     setData(null); setError(''); setLoading(true);
     const { type, emp, project, date, startDate, endDate } = context;
     const dateStr  = safeDate(date);
@@ -218,7 +238,14 @@ export default function DetailPanel({ context, onClose, filters }) {
   // Desktop: floating popup
   return (
     <>
-      <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, zIndex: 200 }} />
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 200,
+          pointerEvents: 'none'   // ✅ THIS IS THE KEY FIX
+        }}
+      />
       <Paper
         ref={panelRef}
         onClick={e => e.stopPropagation()}
