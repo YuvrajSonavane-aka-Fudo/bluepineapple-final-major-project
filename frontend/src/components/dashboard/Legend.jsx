@@ -16,7 +16,7 @@ const DAY_PORTION = [
 const STATUSES = [
   { label: 'Approved',         type: 'check' },
   { label: 'Pending Approval', type: 'pending' },
-  { label: 'Rejected',         type: 'rejected' },
+  { label: 'Rejected / Cancelled',         type: 'rejected' },
 ];
 const TIMELINE = [
   { label: 'Today',          type: 'today' },
