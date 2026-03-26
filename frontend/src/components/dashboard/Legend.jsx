@@ -58,22 +58,27 @@ function Swatch({ item }) {
   // Status swatches — consistent with LeaveCell and DetailPanel StatusIcon
   if (type === 'check') {
     return (
-      <Box sx={{ ...swatchBase, background: '#ECFDF5', border: '1px solid #86EFAC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="15" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+      <Box sx={{ ...swatchBase,  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
       </Box>
     );
   }
   // Pending: dotted border overlay 
   if (type === 'pending') {
-    return (
-      <Box sx={{ ...swatchBase,  position: 'relative' }} />
-    );
-  }
+  return (
+    <Box sx={{ ...swatchBase, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',}}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M12 5v9" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round"/>
+        <circle cx="12" cy="18" r="1.5" fill="#F59E0B"/>
+      </svg>
+    </Box>
+  );
+}
   // Rejected: leave colour fill + red cross overlay (matches LeaveCell rejected style)
   if (type === 'rejected') {
     return (
       <Box sx={{ ...swatchBase,  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </Box>
     );
   }
