@@ -276,21 +276,23 @@ def dashboard_projects(request):
  
     # Leaves filed directly under a scoped project — excluding WFH
     # since WFH does not reduce availability or affect risk
+    EXCLUDED_STATUSES = ["Rejected"]
+
     scoped_leave_qs = LeaveApplication.objects.filter(
-        user_id__in=all_member_ids,
-        project_id__in=scoped_pids,
-        start_date__lte=end_date,
-        end_date__gte=start_date,
-    )
+    user_id__in=all_member_ids,
+    project_id__in=scoped_pids,
+    start_date__lte=end_date,
+    end_date__gte=start_date,
+    ).exclude(leave_status__in=EXCLUDED_STATUSES)
     if leave_statuses:
         scoped_leave_qs = scoped_leave_qs.filter(leave_status__in=leave_statuses)
- 
+
     # Spillover: leaves filed under ANY project outside scoped_pids — excluding WFH
     spillover_leave_qs = LeaveApplication.objects.filter(
-        user_id__in=all_member_ids,
-        start_date__lte=end_date,
-        end_date__gte=start_date,
-    ).exclude(project_id__in=scoped_pids)
+    user_id__in=all_member_ids,
+    start_date__lte=end_date,
+    end_date__gte=start_date,
+    ).exclude(project_id__in=scoped_pids).exclude(leave_status__in=EXCLUDED_STATUSES)
     if leave_statuses:
         spillover_leave_qs = spillover_leave_qs.filter(leave_status__in=leave_statuses)
  
@@ -624,24 +626,26 @@ def project_cell_details(request):
     # Direct leaves — filed under this specific project (ALL types including WFH)
     # We fetch all types here so WFH shows correctly in the employee list,
     # but WFH is excluded from on_leave_count and risk calculation below.
+    EXCLUDED_STATUSES = ["Rejected"]
+
     direct_leave_qs = LeaveApplication.objects.filter(
-        user__in=members,
-        project=project,
-        start_date__lte=target_date,
-        end_date__gte=target_date,
-    )
+    user__in=members,
+    project=project,
+    start_date__lte=target_date,
+    end_date__gte=target_date,
+    ).exclude(leave_status__in=EXCLUDED_STATUSES)
     if leave_statuses:
         direct_leave_qs = direct_leave_qs.filter(leave_status__in=leave_statuses)
- 
+
     # Spillover — leaves filed under any OTHER project for the same members (ALL types)
     spillover_leave_qs = LeaveApplication.objects.filter(
-        user__in=members,
-        start_date__lte=target_date,
-        end_date__gte=target_date,
-    ).exclude(project=project)
+    user__in=members,
+    start_date__lte=target_date,
+    end_date__gte=target_date,
+    ).exclude(project=project).exclude(leave_status__in=EXCLUDED_STATUSES)
     if leave_statuses:
         spillover_leave_qs = spillover_leave_qs.filter(leave_status__in=leave_statuses)
- 
+        
     # { user_id: leave } — direct, project-specific (highest priority)
     leave_by_user = {l.user_id: l for l in direct_leave_qs}
  
@@ -811,22 +815,23 @@ def day_details(request):
         all_member_ids.add(a.user_id)
 
     # Direct leaves — filed under a scoped project (ALL types including WFH)
+    EXCLUDED_STATUSES = ["Rejected"]
+
     direct_leave_qs = LeaveApplication.objects.filter(
-        user_id__in=all_member_ids,
-        project_id__in=scoped_pids,
-        start_date__lte=target_date,
-        end_date__gte=target_date,
-    )
+    user_id__in=all_member_ids,
+    project_id__in=scoped_pids,
+    start_date__lte=target_date,
+    end_date__gte=target_date,
+    ).exclude(leave_status__in=EXCLUDED_STATUSES)
     direct_leave_qs = apply_leave_filters(direct_leave_qs, leave_types, leave_statuses)
 
     # Spillover leaves — filed under any OTHER project not in scoped_pids (ALL types)
     spillover_leave_qs = LeaveApplication.objects.filter(
-        user_id__in=all_member_ids,
-        start_date__lte=target_date,
-        end_date__gte=target_date,
-    ).exclude(project_id__in=scoped_pids)
+    user_id__in=all_member_ids,
+    start_date__lte=target_date,
+    end_date__gte=target_date,
+    ).exclude(project_id__in=scoped_pids).exclude(leave_status__in=EXCLUDED_STATUSES)
     spillover_leave_qs = apply_leave_filters(spillover_leave_qs, leave_types, leave_statuses)
-
     # { (user_id, project_id): leave }  — direct, project-specific
     leave_by_user_project = {}
     # { user_id: leave }  — one direct leave record per user (any project)
