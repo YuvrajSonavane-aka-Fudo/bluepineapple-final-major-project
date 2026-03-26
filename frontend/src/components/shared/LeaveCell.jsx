@@ -79,7 +79,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
               clipPath: session === 'Second Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
             }} />
           </div>
-          <div style={{ position: 'absolute', inset: 0.2, border: '2px dotted rgba(0,0,0,0.45)', pointerEvents: 'none' }} />
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none', color:"#F59E0B", fontWeight:700, fontSize:22 }}>!</div>
         </>
       )}
 
@@ -111,7 +111,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
       {hasLeave && !hasSplit && !isHalfDay && isPending && (
         <>
           <div style={{ position: 'absolute', inset: 0.2, background: baseColor }} />
-          <div style={{ position: 'absolute', inset: 0.2, border: '2px dotted rgba(0,0,0,0.45)', pointerEvents: 'none' }} />
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none', color:"#F59E0B", fontWeight:700, fontSize:22 }}>!</div>
         </>
       )}
 
@@ -135,7 +135,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
         </div>
       )}
 
-      {/* ── HALF-DAY PENDING: colour triangle + dotted border ── */}
+      {/* HALF-DAY PENDING: colour triangle + bang */}
       {hasLeave && !hasSplit && isHalfDay && isPending && (
         <>
           <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
@@ -144,7 +144,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
               clipPath: session === 'First Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
             }} />
           </div>
-          <div style={{ position: 'absolute', inset: 0.2, border: '2px dotted rgba(0,0,0,0.45)', pointerEvents: 'none' }} />
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none', color:"#F59E0B", fontWeight:700, fontSize:22 }}>!</div>
         </>
       )}
 
