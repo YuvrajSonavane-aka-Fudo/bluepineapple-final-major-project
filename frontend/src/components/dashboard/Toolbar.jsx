@@ -48,7 +48,7 @@ export default function Toolbar({
   const endInputRef   = useRef(null);
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected'];
-  const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
+  const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'Sick', 'Conference'];
 
   const getActiveFilter = () => {
     const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();

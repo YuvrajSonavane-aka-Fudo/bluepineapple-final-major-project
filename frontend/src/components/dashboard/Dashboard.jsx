@@ -233,19 +233,23 @@ export default function Dashboard() {
     });
   });
 
-  // employeeCellsByDate: only real leave (non-WFH) drives date strip highlight
+  // employeeCellsByDate: only Approved, non-WFH leaves drive date strip highlight
+  // Pending/Rejected leaves are shown in cells but must NOT make a date appear
+  // to have impactful leave for date-strip colouring or day-click purposes.
   const employeeCellsByDate = {};
   (empData.employees || []).forEach(emp => {
     Object.entries(emp.cells || {}).forEach(([date, cell]) => {
-      if (cell && cell.leave_type !== 'WFH') employeeCellsByDate[date] = true;
+      if (cell && cell.leave_type !== 'WFH' && cell.leave_status === 'Approved')
+        employeeCellsByDate[date] = true;
     });
   });
 
-  // wfhCellsByDate: dates where at least one employee is WFH (still needs day view)
+  // wfhCellsByDate: dates where at least one employee is Approved WFH
   const wfhCellsByDate = {};
   (empData.employees || []).forEach(emp => {
     Object.entries(emp.cells || {}).forEach(([date, cell]) => {
-      if (cell && cell.leave_type === 'WFH') wfhCellsByDate[date] = true;
+      if (cell && cell.leave_type === 'WFH' && cell.leave_status === 'Approved')
+        wfhCellsByDate[date] = true;
     });
   });
 
