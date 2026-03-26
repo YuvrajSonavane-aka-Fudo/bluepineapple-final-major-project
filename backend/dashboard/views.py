@@ -276,7 +276,7 @@ def dashboard_projects(request):
  
     # Leaves filed directly under a scoped project — excluding WFH
     # since WFH does not reduce availability or affect risk
-    EXCLUDED_STATUSES = ["Rejected"]
+    EXCLUDED_STATUSES = ["Rejected" , "Cancelled"]
 
     scoped_leave_qs = LeaveApplication.objects.filter(
     user_id__in=all_member_ids,
@@ -627,7 +627,7 @@ def project_cell_details(request):
     # Direct leaves — filed under this specific project (ALL types including WFH)
     # We fetch all types here so WFH shows correctly in the employee list,
     # but WFH is excluded from on_leave_count and risk calculation below.
-    EXCLUDED_STATUSES = ["Rejected"]
+    EXCLUDED_STATUSES = ["Rejected","Cancelled"]
 
     direct_leave_qs = LeaveApplication.objects.filter(
     user__in=members,
@@ -817,7 +817,7 @@ def day_details(request):
         all_member_ids.add(a.user_id)
 
     # Direct leaves — filed under a scoped project (ALL types including WFH)
-    EXCLUDED_STATUSES = ["Rejected"]
+    EXCLUDED_STATUSES = ["Rejected", "Cancelled" ]
 
     direct_leave_qs = LeaveApplication.objects.filter(
     user_id__in=all_member_ids,
