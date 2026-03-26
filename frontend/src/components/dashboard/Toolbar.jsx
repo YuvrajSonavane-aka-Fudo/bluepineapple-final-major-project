@@ -47,7 +47,7 @@ export default function Toolbar({
   const startInputRef = useRef(null);
   const endInputRef   = useRef(null);
 
-  const ALL_STATUSES = ['Approved', 'Pending', 'Rejected'];
+  const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
   const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
 
   const getActiveFilter = () => {

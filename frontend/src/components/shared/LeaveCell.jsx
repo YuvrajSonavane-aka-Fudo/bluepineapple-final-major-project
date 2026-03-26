@@ -16,6 +16,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
   const session   = cell?.half_day_session;
   const isPending  = hasLeave && cell?.leave_status === 'Pending';
   const isRejected = hasLeave && cell?.leave_status === 'Rejected';
+  const isCancelled = hasLeave && cell?.leave_status === 'Cancelled';
   const isHalfDay  = hasLeave && cell?.is_half_day;
 
   const secondary    = cell?.secondary ?? null;
@@ -30,7 +31,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
   const baseColor = getColor(leaveType);
   const secColor  = getColor(secLeaveType);
 
-  const isClickable = hasLeave && !isRejected;
+  const isClickable = hasLeave && (!isRejected || !isCancelled);
   const handleClick = (e) => {
     if (!isClickable) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -53,7 +54,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
       }}
     >
       {/* ── SPLIT HALF-DAY APPROVED ── */}
-      {hasSplit && !isRejected && !isPending && (
+      {hasSplit && (!isRejected || !isCancelled) && !isPending && (
         <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
           <div style={{
             position: 'absolute', inset: 0, background: baseColor,
@@ -84,7 +85,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
       )}
 
       {/* ── SPLIT HALF-DAY REJECTED: triangles + cross overlay ── */}
-      {hasSplit && isRejected && (
+      {hasSplit && (isRejected || isCancelled) && (
         <>
           <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
             <div style={{
@@ -103,7 +104,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
       )}
 
       {/* ── FULL LEAVE APPROVED ── */}
-      {hasLeave && !hasSplit && !isHalfDay && !isRejected && !isPending && (
+      {hasLeave && !hasSplit && !isHalfDay && (!isRejected || !isCancelled) && !isPending && (
         <div style={{ position: 'absolute', inset: 0.2, background: baseColor }} />
       )}
 
@@ -115,8 +116,8 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
         </>
       )}
 
-      {/* ── FULL LEAVE REJECTED: colour fill + cross ── */}
-      {hasLeave && !hasSplit && !isHalfDay && isRejected && (
+      {/* ── FULL LEAVE REJECTED/CANCELLED: colour fill + cross ── */}
+      {hasLeave && !hasSplit && !isHalfDay && (isRejected || isCancelled) && (
         <>
           <div style={{ position: 'absolute', inset: 0.2, background: baseColor }} />
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
@@ -126,7 +127,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
       )}
 
       {/* ── HALF-DAY APPROVED ── */}
-      {hasLeave && !hasSplit && isHalfDay && !isRejected && !isPending && (
+      {hasLeave && !hasSplit && isHalfDay && (!isRejected || !isCancelled) && !isPending && (
         <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
           <div style={{
             position: 'absolute', inset: 0, background: baseColor,
@@ -149,7 +150,7 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
       )}
 
       {/* ── HALF-DAY REJECTED: colour triangle + cross ── */}
-      {hasLeave && !hasSplit && isHalfDay && isRejected && (
+      {hasLeave && !hasSplit && isHalfDay && (isRejected || isCancelled) && (
         <>
           <div style={{ position: 'absolute', inset: 0.2, overflow: 'hidden' }}>
             <div style={{
