@@ -283,7 +283,7 @@ def dashboard_projects(request):
     project_id__in=scoped_pids,
     start_date__lte=end_date,
     end_date__gte=start_date,
-    leave_status = 'Approved',
+
     ).exclude(leave_status__in=EXCLUDED_STATUSES)
     if leave_statuses:
         scoped_leave_qs = scoped_leave_qs.filter(leave_status__in=leave_statuses)
@@ -293,7 +293,6 @@ def dashboard_projects(request):
     user_id__in=all_member_ids,
     start_date__lte=end_date,
     end_date__gte=start_date,
-    leave_status = 'Approved',
     ).exclude(project_id__in=scoped_pids).exclude(leave_status__in=EXCLUDED_STATUSES)
     if leave_statuses:
         spillover_leave_qs = spillover_leave_qs.filter(leave_status__in=leave_statuses)
@@ -635,7 +634,6 @@ def project_cell_details(request):
     project=project,
     start_date__lte=target_date,
     end_date__gte=target_date,
-    leave_status = 'Approved',
     ).exclude(leave_status__in=EXCLUDED_STATUSES)
     if leave_statuses:
         direct_leave_qs = direct_leave_qs.filter(leave_status__in=leave_statuses)
@@ -645,7 +643,7 @@ def project_cell_details(request):
     user__in=members,
     start_date__lte=target_date,
     end_date__gte=target_date,
-    leave_status = 'Approved',
+    
     ).exclude(project=project).exclude(leave_status__in=EXCLUDED_STATUSES)
     if leave_statuses:
         spillover_leave_qs = spillover_leave_qs.filter(leave_status__in=leave_statuses)
@@ -826,7 +824,6 @@ def day_details(request):
     project_id__in=scoped_pids,
     start_date__lte=target_date,
     end_date__gte=target_date,
-    leave_status = 'Approved',
     ).exclude(leave_status__in=EXCLUDED_STATUSES)
     
     direct_leave_qs = apply_leave_filters(direct_leave_qs, leave_types, leave_statuses)
@@ -836,7 +833,6 @@ def day_details(request):
     user_id__in=all_member_ids,
     start_date__lte=target_date,
     end_date__gte=target_date,
-    leave_status = 'Approved',
     ).exclude(project_id__in=scoped_pids).exclude(leave_status__in=EXCLUDED_STATUSES)
     spillover_leave_qs = apply_leave_filters(spillover_leave_qs, leave_types, leave_statuses)
     # { (user_id, project_id): leave }  — direct, project-specific
