@@ -51,11 +51,15 @@ export default function Toolbar({
   const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
 
   const getActiveFilter = () => {
-    const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
-    if (isSameDay(startDate, getTodayRange().start) && isSameDay(endDate, getTodayRange().end)) return 'T';
-    if (isSameDay(startDate, getWeekRange().start)  && isSameDay(endDate, getWeekRange().end))  return 'W';
-    if (isSameDay(startDate, getMonthRange().start) && isSameDay(endDate, getMonthRange().end)) return 'M';
-    if (isSameDay(startDate, getYearRange().start)  && isSameDay(endDate, getYearRange().end))  return 'Y';
+    const isSameRange = (r) =>
+      startDate.toDateString() === r.start.toDateString() &&
+      endDate.toDateString() === r.end.toDateString();
+
+    if (isSameRange(getTodayRange())) return 'T';
+    if (isSameRange(getWeekRange()))  return 'W';
+    if (isSameRange(getMonthRange())) return 'M';
+    if (isSameRange(getYearRange()))  return 'Y';
+
     return null;
   };
 
@@ -139,7 +143,11 @@ export default function Toolbar({
           <IconButton
             onClick={() => {
               const r = shiftRange(startDate, endDate, 'back');
-              handleRangeChange(r.start, r.end);
+
+              const start = r.start <= r.end ? r.start : r.end;
+              const end   = r.start <= r.end ? r.end   : r.start;
+
+              handleRangeChange(start, end);
             }}
             sx={{ ...iconBtnSx, width: 26, height: 26 }}
           >
@@ -190,7 +198,12 @@ export default function Toolbar({
           <IconButton
             onClick={() => {
               const r = shiftRange(startDate, endDate, 'forward');
-              handleRangeChange(r.start, r.end);
+
+              
+              const start = r.start <= r.end ? r.start : r.end;
+              const end   = r.start <= r.end ? r.end   : r.start;
+
+              handleRangeChange(start, end);
             }}
             sx={{ ...iconBtnSx, width: 26, height: 26 }}
           >
