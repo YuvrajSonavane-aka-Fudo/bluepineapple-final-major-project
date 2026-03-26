@@ -74,8 +74,7 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
           if (isWeekend) { textColor = '#9aa0ad'; numColor = '#9aa0ad'; }
           if (today)     { textColor = '#994545'; numColor = '#994545'; }
 
-          const tooltipLabel = format(parseISO(d.date), 'EEE, MMM d yyyy');
-
+          const tooltipLabel = format(parseISO(d.date), 'MMM d, yyyy').replace(', ', ',\u00A0\u00A0\u00A0');
           return (
             <div
               key={d.date}
