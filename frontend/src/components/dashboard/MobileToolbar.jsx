@@ -8,8 +8,9 @@ import { useAuth } from '../../hooks/useAuth';
 import {
   Box, Typography, IconButton,
   Checkbox, Dialog, DialogContent, DialogActions,
-  Collapse,
+  Collapse, Switch, CircularProgress,
 } from '@mui/material';
+import { exportDashboardToExcel } from './ExportToExcel';
 import ChevronLeftIcon           from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon          from '@mui/icons-material/ChevronRight';
 import KeyboardArrowDownIcon     from '@mui/icons-material/KeyboardArrowDown';
@@ -362,12 +363,25 @@ export default function MobileToolbar({
   leaveStatuses, onLeaveStatusesChange,
   leaveTypes, onLeaveTypesChange,
   onRefresh, onClear, loading,
+  showAll, onShowAllChange,
+  hideWeekends, onHideWeekendsChange,
+  empData, projData, dateStrip, exportFilters,
 }) {
   const { logout } = useAuth();
   const [drawerOpen,     setDrawerOpen]     = useState(false);
   const [openSection,    setOpenSection]    = useState(null);
   const [showLogout,     setShowLogout]     = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [exporting,      setExporting]      = useState(false);
+
+  const handleExport = () => {
+    setExporting(true);
+    try {
+      exportDashboardToExcel({ empData, projData, dateStrip, filters: exportFilters });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
   const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
@@ -379,7 +393,7 @@ export default function MobileToolbar({
     return null;
   })();
 
-  const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'MMM d, yyyy');
+  const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'd MMM');
 
   const toggleArr = (arr, val, setter, allValues) => {
     const next = arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
@@ -391,6 +405,8 @@ export default function MobileToolbar({
     selectedProjectIds.length > 0,
     leaveStatuses.length > 0,
     leaveTypes.length > 0,
+    showAll,
+    hideWeekends,
   ].filter(Boolean).length;
 
   const iconBtnSx = {
@@ -634,7 +650,7 @@ export default function MobileToolbar({
           </FilterSection>
 
           <FilterSection id="status" label="Leave Status" badge={leaveStatuses.length}>
-            <CheckItem label="All Statuses" checked={isAllSelected(leaveStatuses, ALL_STATUSES)} onClick={() => onLeaveStatusesChange([])} />
+            <CheckItem label="All" checked={isAllSelected(leaveStatuses, ALL_STATUSES)} onClick={() => onLeaveStatusesChange([])} />
             {ALL_STATUSES.map(st => (
               <CheckItem key={st} label={st} checked={leaveStatuses.includes(st)}
                 onClick={() => toggleArr(leaveStatuses, st, onLeaveStatusesChange, ALL_STATUSES)} />
@@ -642,11 +658,68 @@ export default function MobileToolbar({
           </FilterSection>
 
           <FilterSection id="type" label="Leave Type" badge={leaveTypes.length}>
-            <CheckItem label="All Types" checked={isAllSelected(leaveTypes, ALL_TYPES)} onClick={() => onLeaveTypesChange([])} />
+            <CheckItem label="All" checked={isAllSelected(leaveTypes, ALL_TYPES)} onClick={() => onLeaveTypesChange([])} />
             {ALL_TYPES.map(lt => (
               <CheckItem key={lt} label={lt} checked={leaveTypes.includes(lt)}
                 onClick={() => toggleArr(leaveTypes, lt, onLeaveTypesChange, ALL_TYPES)} />
             ))}
+          </FilterSection>
+
+          {/* Display toggles — moved from Legend for mobile */}
+          <FilterSection id="display" label="Display" badge={[showAll, hideWeekends].filter(Boolean).length}>
+            {[
+              { label: 'All Employees', val: showAll,      fn: () => onShowAllChange(!showAll) },
+              { label: 'Hide Weekends', val: hideWeekends, fn: () => onHideWeekendsChange(!hideWeekends) },
+            ].map(({ label, val, fn }) => (
+              <Box key={label} onClick={fn} sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                py: 0.65, px: 0.5, borderRadius: '6px', cursor: 'pointer',
+                '&:active': { background: '#f0f2f5' },
+              }}>
+                <Typography sx={{ fontSize: 13, color: '#374151' }}>{label}</Typography>
+                <Switch
+                  checked={!!val}
+                  onChange={fn}
+                  size="small"
+                  onClick={e => e.stopPropagation()}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': { color: '#1e2d5a' },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#1e2d5a' },
+                    '& .MuiSwitch-track': { backgroundColor: '#d1d5db' },
+                  }}
+                />
+              </Box>
+            ))}
+          </FilterSection>
+
+          {/* Export */}
+          <FilterSection id="export" label="Export">
+            <Box
+              component="button"
+              onClick={handleExport}
+              disabled={exporting}
+              sx={{
+                width: '100%', py: '10px', borderRadius: '8px', border: 'none',
+                background: exporting ? '#93c5fd' : '#2563EB',
+                color: '#fff', fontSize: 13, fontWeight: 600,
+                cursor: exporting ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                mt: 0.5,
+                '&:hover': { background: exporting ? '#93c5fd' : '#1d4ed8' },
+              }}
+            >
+              {exporting
+                ? <CircularProgress size={13} sx={{ color: '#fff' }} />
+                : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                )
+              }
+              {exporting ? 'Exporting…' : 'Export to Excel'}
+            </Box>
           </FilterSection>
         </Box>
 

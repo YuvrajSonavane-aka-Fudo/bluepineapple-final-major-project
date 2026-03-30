@@ -1,4 +1,3 @@
-// src/components/dashboard/Legend.jsx
 import { Box, Typography, Switch, Divider, Button, CircularProgress } from '@mui/material';
 import { useState } from 'react';
 import { exportDashboardToExcel } from './ExportToExcel';
@@ -105,6 +104,7 @@ export default function Legend({
   hideWeekends, onHideWeekendsChange,
   // export props passed from Dashboard
   empData, projData, dateStrip, filters,
+  isMobile = false,
 }) {
   const [exporting, setExporting] = useState(false);
 
@@ -129,64 +129,66 @@ export default function Legend({
       }}
     >
 
-      {/* Filters + Export */}
-      <Box sx={{ px: 1.75, pb: 1.75, borderBottom: '1px solid #e5e7eb' }}>
-        <Typography component="p" sx={sectionTitle}>FILTERS</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-          {[
-            { label: 'All Employees', val: showAll,      fn: () => onShowAllChange(!showAll) },
-            { label: 'Hide Weekends', val: hideWeekends, fn: () => onHideWeekendsChange(!hideWeekends) },
-          ].map(({ label, val, fn }) => (
-            <Box key={label} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography sx={labelSx}>{label}</Typography>
-              <Switch
-                checked={val}
-                onChange={fn}
-                size="small"
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#3b82f6' },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3b82f6' },
-                  '& .MuiSwitch-track': { backgroundColor: '#d1d5db' },
-                }}
-              />
-            </Box>
-          ))}
+      {/* Filters + Export — desktop only; on mobile these live in the Filters drawer */}
+      {!isMobile && (
+        <Box sx={{ px: 1.75, pb: 1.75, borderBottom: '1px solid #e5e7eb' }}>
+          <Typography component="p" sx={sectionTitle}>FILTERS</Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            {[
+              { label: 'All Employees', val: showAll,      fn: () => onShowAllChange(!showAll) },
+              { label: 'Hide Weekends', val: hideWeekends, fn: () => onHideWeekendsChange(!hideWeekends) },
+            ].map(({ label, val, fn }) => (
+              <Box key={label} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography sx={labelSx}>{label}</Typography>
+                <Switch
+                  checked={val}
+                  onChange={fn}
+                  size="small"
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': { color: '#3b82f6' },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#3b82f6' },
+                    '& .MuiSwitch-track': { backgroundColor: '#d1d5db' },
+                  }}
+                />
+              </Box>
+            ))}
 
-          {/* Export button */}
-          <Button
-            onClick={handleExport}
-            disabled={exporting}
-            fullWidth
-            size="small"
-            variant="contained"
-            startIcon={
-              exporting
-                ? <CircularProgress size={12} sx={{ color: '#fff' }} />
-                : (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                )
-            }
-            sx={{
-              mt: 0.5,
-              fontSize: 11,
-              fontWeight: 600,
-              textTransform: 'none',
-              background: '#2563EB',
-              borderRadius: '6px',
-              boxShadow: 'none',
-              py: 0.6,
-              '&:hover': { background: '#1d4ed8', boxShadow: 'none' },
-              '&:disabled': { background: '#93c5fd', color: '#fff' },
-            }}
-          >
-            {exporting ? 'Exporting…' : 'Export to Excel'}
-          </Button>
+            {/* Export button */}
+            <Button
+              onClick={handleExport}
+              disabled={exporting}
+              fullWidth
+              size="small"
+              variant="contained"
+              startIcon={
+                exporting
+                  ? <CircularProgress size={12} sx={{ color: '#fff' }} />
+                  : (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                  )
+              }
+              sx={{
+                mt: 0.5,
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: 'none',
+                background: '#2563EB',
+                borderRadius: '6px',
+                boxShadow: 'none',
+                py: 0.6,
+                '&:hover': { background: '#1d4ed8', boxShadow: 'none' },
+                '&:disabled': { background: '#93c5fd', color: '#fff' },
+              }}
+            >
+              {exporting ? 'Exporting…' : 'Export to Excel'}
+            </Button>
+          </Box>
         </Box>
-      </Box>
+      )}
 
       <Section title="LEAVE TYPES">
         {LEAVE_TYPES.map(item => (
