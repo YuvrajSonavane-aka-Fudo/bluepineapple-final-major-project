@@ -46,7 +46,7 @@ export default function EmployeePanel({
     ? employees
     : employees.filter(emp => Object.values(emp.cells || {}).some(c => c !== null));
 
-  // ✅ Clear stale refs whenever the filtered list length changes
+  // Clear stale refs whenever the filtered list length changes
   // This prevents old row refs from being at wrong indices after showAll toggles
   useEffect(() => {
     rowRefs.current = rowRefs.current.slice(0, filtered.length);
@@ -62,7 +62,7 @@ export default function EmployeePanel({
     syncing.current = false;
   }, [headerScrollRef, projScrollRef]);
 
-  // ✅ Re-sync all rows to the current scroll position after filtered list changes
+  // Re-sync all rows to the current scroll position after filtered list changes
   useEffect(() => {
     const currentScroll = rowRefs.current.find(Boolean)?.scrollLeft ?? 0;
     syncAll(currentScroll);
