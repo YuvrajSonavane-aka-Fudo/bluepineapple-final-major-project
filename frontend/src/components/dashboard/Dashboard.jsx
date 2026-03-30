@@ -288,7 +288,7 @@ export default function Dashboard() {
     projScrollRef,
     legendVisible,
     onToggleLegend: () => setLegendVisible(v => !v),
-    // ✅ Pass ref down so SharedHeader can attach it to the toggle button
+    // Pass ref down so SharedHeader can attach it to the toggle button
     legendToggleBtnRef,
   };
 
@@ -422,7 +422,7 @@ export default function Dashboard() {
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch', position: 'relative' }}>
 
         {/*
-          ✅ Fix 2: containerRef now wraps ONLY the main content columns (header + panels + divider).
+          containerRef now wraps ONLY the main content columns (header + panels + divider).
           The legend panel is a sibling rendered via position:fixed so it never
           affects the flex layout — containerRef width stays constant regardless
           of legend open/close, so the divider never shifts.
@@ -463,7 +463,7 @@ export default function Dashboard() {
           </Box>
         </Box>
 
-        {/* ✅ Legend as position:fixed — completely outside flex flow so it never shifts the divider */}
+        {/* Legend as position:fixed — completely outside flex flow so it never shifts the divider */}
         <Box
           ref={legendRef}
           sx={{

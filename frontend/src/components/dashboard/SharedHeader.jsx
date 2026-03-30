@@ -41,7 +41,7 @@ export default function SharedHeader({
   projScrollRef,
   legendVisible,
   onToggleLegend,
-  legendToggleBtnRef,   // ✅ ref attached to toggle btn so Dashboard outside-click can ignore it
+  legendToggleBtnRef,   //  ref attached to toggle btn so Dashboard outside-click can ignore it
 }) {
   const isMobile = useIsMobile();
   const FW = useFrozenWidth();
@@ -79,7 +79,7 @@ export default function SharedHeader({
     syncing.current = false;
   }, [empScrollRef, projScrollRef, updateThumb]);
 
-  // ✅ Mouse wheel on the date strip scrolls horizontally
+  //  Mouse wheel on the date strip scrolls horizontally
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
@@ -196,7 +196,7 @@ export default function SharedHeader({
           p: 0,
           zIndex: 101,
           boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
-          transition: 'all 0.2s ease',
+          // transition: 'all 0.2s ease',
           '&:hover': {
             background: '#f9fafb',
             color: '#374151',
@@ -272,8 +272,8 @@ export default function SharedHeader({
       </Box>
 
       {/* Scrollable date strip + custom scrollbar thumb */}
-      {/* ✅ paddingRight leaves room for the legend button so it's never overlapped */}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', pr: { xs: 0, md: '48px' } }}>
+      {/* paddingRight leaves room for the legend button so it's never overlapped */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <Box
           ref={headerRef}
           onScroll={e => syncAll(e.currentTarget.scrollLeft)}
@@ -281,7 +281,7 @@ export default function SharedHeader({
             flex: 1, overflowX: 'scroll', overflowY: 'hidden',
             height: HEADER_H, display: 'flex', alignItems: 'flex-start',
             scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
-            // ✅ Prevent text selection when mouse-dragging over date strip
+            //  Prevent text selection when mouse-dragging over date strip
             userSelect: 'none',
             WebkitUserSelect: 'none',
             cursor: 'default',
