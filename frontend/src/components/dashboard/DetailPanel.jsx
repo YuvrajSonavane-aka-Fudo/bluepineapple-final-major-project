@@ -13,7 +13,7 @@ function safeDate(d) {
 
 const LEAVE_COLORS = { Paid: '#2563eb', Unpaid: '#93c5fd', WFH: '#59be68' };
 
-// Consistent with LeaveCell: Pending = leave colour fill + dotted border overlay
+// Consistent with LeaveCell: Pending = leave colour fill + bang sign overlay
 //                            Rejected = leave colour fill + red cross overlay
 // StatusIcon uses a fixed "Paid" blue swatch as the representative colour (matches legend)
 function StatusIcon({ status, leaveType }) {
@@ -21,7 +21,7 @@ function StatusIcon({ status, leaveType }) {
   const SWATCH_COLOR = { Paid: '#2563EB', Unpaid: '#93C5FD', WFH: '#59be68' };
   const fillColor = SWATCH_COLOR[leaveType] ?? '#2563EB';
   const size = { width: 14, height: 11, borderRadius: '2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ml: '5px', flexShrink: 0, position: 'relative', overflow: 'hidden' };
-  const tooltips = { Approved: 'Approved', Pending: 'Pending approval', Rejected: 'Rejected' };
+  const tooltips = { Approved: 'Approved', Pending: 'Pending approval', Rejected: 'Rejected', Cancelled: 'Cancelled' };
   let icon = null;
 
   if (status === 'Approved') {
@@ -33,13 +33,13 @@ function StatusIcon({ status, leaveType }) {
   }
   if (status === 'Pending') {
     icon = (
-      <Box component="span" sx={{ ...size, background: fillColor, border: '2px dotted rgba(0,0,0,0.45)' }} />
-    );
-  }
-  if (status === 'Rejected') {
-    icon = (
-      <Box component="span" sx={{ ...size, background: fillColor }}>
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      <Box component="span" sx={{ ...size, position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: fillColor,padding:'8px'}}>
+        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 5v9" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round"/>
+            <circle cx="12" cy="18" r="1.5" fill="#F59E0B"/>
+          </svg>
+        </Box>
       </Box>
     );
   }
@@ -68,16 +68,20 @@ export default function DetailPanel({ context, onClose, filters }) {
   const leaveStatusesKey = JSON.stringify(filters?.leave_statuses || []);
   const leaveTypesKey    = JSON.stringify(filters?.leave_types || []);
 
+  // Skip panel entirely for Rejected or Cancelled — tooltip on the cell is sufficient
+  const leaveStatus = context?.leaveStatus;
+  const isBlockedStatus = leaveStatus === 'Rejected' || leaveStatus === 'Cancelled';
+
   useEffect(() => {
-    if (!context) return;
+    if (!context || isBlockedStatus) return;
 
     const handleClickOutside = (e) => {
-      // If click is inside panel → ignore
+      // If click is inside panel - ignore
       if (panelRef.current && panelRef.current.contains(e.target)) {
         return;
       }
 
-      // Otherwise → close panel
+      // Otherwise - close panel
       onClose();
     };
 
@@ -86,10 +90,10 @@ export default function DetailPanel({ context, onClose, filters }) {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [context, onClose]);
+  }, [context, onClose, isBlockedStatus]);
 
   useEffect(() => {
-    if (!context) return;
+    if (!context || isBlockedStatus) return;
     setData(null); setError(''); setLoading(true);
     const { type, emp, project, date, startDate, endDate } = context;
     const dateStr  = safeDate(date);
@@ -102,7 +106,7 @@ export default function DetailPanel({ context, onClose, filters }) {
     else if (type === 'project') call = fetchProjectCellDetails({ ...base, project_id: project.project_id, date: dateStr });
     else call = fetchDayDetails({ ...base, date: dateStr, leave_types: JSON.parse(leaveTypesKey) });
     call.then(setData).catch(e => setError(e?.message || 'Failed to load.')).finally(() => setLoading(false));
-  }, [context, projectIdsKey, leaveStatusesKey, leaveTypesKey]);
+  }, [context, projectIdsKey, leaveStatusesKey, leaveTypesKey, isBlockedStatus]);
 
   const [isMobileView, setIsMobileView] = useState(
     typeof window !== 'undefined' && window.innerWidth < 900
@@ -114,7 +118,7 @@ export default function DetailPanel({ context, onClose, filters }) {
   }, []);
 
   useLayoutEffect(() => {
-    if (!context || !panelRef.current) return;
+    if (!context || isBlockedStatus || !panelRef.current) return;
     const vw = window.innerWidth, vh = window.innerHeight;
     const rect = panelRef.current.getBoundingClientRect();
     const modalH = rect.height, modalW = rect.width;
@@ -138,9 +142,14 @@ export default function DetailPanel({ context, onClose, filters }) {
     }
     top = Math.max(GAP, Math.min(vh - modalH - GAP, top));
     setPos({ top, left });
-  }, [context, data]);
+  }, [context, data, isBlockedStatus]);
 
+  // No context at all — render nothing
   if (!context) return null;
+
+  // Rejected / Cancelled — render nothing (tooltip lives on the cell via StatusIcon)
+  if (isBlockedStatus) return null;
+
   const { type, date } = context;
   const parsedDate = date instanceof Date ? date : (date ? new Date(date + 'T12:00:00') : null);
   const dateLabel  = parsedDate ? format(parsedDate, 'MMM d, yyyy') : '';
@@ -243,7 +252,7 @@ export default function DetailPanel({ context, onClose, filters }) {
           position: 'fixed',
           inset: 0,
           zIndex: 200,
-          pointerEvents: 'none'   // ✅ THIS IS THE KEY FIX
+          pointerEvents: 'none'  
         }}
       />
       <Paper
@@ -292,7 +301,6 @@ function WFHRow({ children }) {
       px: 1, py: 0.75, borderRadius: '6px',
       background: '#f8f9fb',
       border: '1px solid #eef0f3',
-      borderLeft: '2px solid #1D9E75',
       mb: '3px',
     }}>
       {children}
@@ -334,8 +342,9 @@ function EmployeeView({ data, leaveStatus, leaveType }) {
             <Row key={p.project_id}>
               <Box sx={{ flex: 1 }}>
                 <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{p.project_name}</Typography>
-                {p.leave_type && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
+              </Box>
+              {p.leave_type && (
+                  <Box sx={{ display: 'flex', alignItems: 'center',mr:'-4px', mt: '2px' }}>
                     <Dot color={LEAVE_COLORS[p.leave_type] || '#9aa0ad'} />
                     <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
                       {p.leave_type === 'WFH'
@@ -346,8 +355,6 @@ function EmployeeView({ data, leaveStatus, leaveType }) {
                     </Typography>
                   </Box>
                 )}
-              </Box>
-              <Avail hasLeave={!!p.leave_type} isHalfDay={p.is_half_day} leaveType={p.leave_type} />
             </Row>
           ))
       }
@@ -392,19 +399,14 @@ function ProjectView({ data }) {
                   <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>
                     {emp.full_name}
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
                     <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
                     <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
                       {emp.leave_type}
                       {emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
                     </Typography>
-                  </Box>
                 </Box>
-                <Avail
-                  hasLeave={!!emp.leave_type}
-                  isHalfDay={emp.is_half_day}
-                  leaveType={emp.leave_type}
-                />
               </Row>
             ))
       }
@@ -473,16 +475,15 @@ function DayView({ data }) {
                   <Row key={emp.user_id}>
                     <Box sx={{ flex: 1 }}>
                       <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{emp.full_name}</Typography>
-                      {emp.leave_type && (
+                    </Box>
+                    {emp.leave_type && (
                         <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
                           <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
                           <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
                             {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
                           </Typography>
                         </Box>
-                      )}
-                    </Box>
-                    <Avail hasLeave={!!emp.leave_type} isHalfDay={emp.is_half_day} leaveType={emp.leave_type} />
+                    )}
                   </Row>
                 ))
             }
@@ -490,9 +491,6 @@ function DayView({ data }) {
             {wfhEmps.length > 0 && (
               <>
                 <Box sx={{ height: '0.5px', background: '#eef0f3', my: '6px' }} />
-                <Typography sx={STICKY_LABEL}>
-                  WFH ({wfhEmps.length})
-                </Typography>
                 {wfhEmps.map(emp => (
                   <WFHRow key={emp.user_id}>
                     <Box sx={{ flex: 1 }}>
@@ -537,10 +535,7 @@ function DayView({ data }) {
             {/* WFH IMPACTED — projects with WFH only (no real absence) */}
             {wfhImpactedProjects.length > 0 && (
               <>
-                <Box sx={{ height: '0.5px', background: '#eef0f3', my: '6px' }} />
-                <Typography sx={STICKY_LABEL}>
-                  WFH IMPACTED ({wfhImpactedProjects.length})
-                </Typography>
+                <Box sx={{ height: '0.2px', background: '#eef0f3', my: '4px' }} />
                 {wfhImpactedProjects.map(p => (
                   <WFHRow key={p.project_id}>
                     <Box sx={{ flex: 1 }}>
