@@ -199,7 +199,6 @@ export default function SharedHeader({
           p: 0,
           zIndex: 101,
           boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
-          transition: 'all 0.2s ease',
           '&:hover': {
             background: '#f9fafb',
             color: '#374151',
