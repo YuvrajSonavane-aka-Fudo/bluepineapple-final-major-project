@@ -63,7 +63,7 @@ function Swatch({ item }) {
       </Box>
     );
   }
-  // Pending: dotted border overlay 
+  // Pending: bang sign overlay 
   if (type === 'pending') {
   return (
     <Box sx={{ ...swatchBase, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',}}>
