@@ -42,6 +42,16 @@ export default function EmployeePanel({
   const syncing  = useRef(false);
   const bodyRef  = useRef(null);
 
+  const filtered = showAll
+    ? employees
+    : employees.filter(emp => Object.values(emp.cells || {}).some(c => c !== null));
+
+  // ✅ Clear stale refs whenever the filtered list length changes
+  // This prevents old row refs from being at wrong indices after showAll toggles
+  useEffect(() => {
+    rowRefs.current = rowRefs.current.slice(0, filtered.length);
+  }, [filtered.length]);
+
   // --- sync helper ---
   const syncAll = useCallback((scrollLeft) => {
     if (syncing.current) return;
@@ -51,6 +61,12 @@ export default function EmployeePanel({
     if (projScrollRef?.current)   projScrollRef.current.scrollLeft   = scrollLeft;
     syncing.current = false;
   }, [headerScrollRef, projScrollRef]);
+
+  // ✅ Re-sync all rows to the current scroll position after filtered list changes
+  useEffect(() => {
+    const currentScroll = rowRefs.current.find(Boolean)?.scrollLeft ?? 0;
+    syncAll(currentScroll);
+  }, [filtered.length, syncAll]);
 
   // Expose first row's scroll position via scrollRef so SharedHeader can init
   useEffect(() => {
@@ -94,10 +110,6 @@ export default function EmployeePanel({
     };
   }, [syncAll]);
 
-  const filtered = showAll
-    ? employees
-    : employees.filter(emp => Object.values(emp.cells || {}).some(c => c !== null));
-
   const todayIdx  = dateStrip.findIndex(d => isToday(parseISO(d.date)));
   const todayLeft = todayIdx >= 0 ? todayIdx * CELL_W : null;
 
@@ -109,8 +121,6 @@ export default function EmployeePanel({
           : filtered.length === 0
             ? <EmptyState searchValue={globalSearch} />
             : filtered.map((emp, idx) => {
-                // Only count Approved leaves in the badge —
-                // Pending and Rejected do not affect actual availability
                 const leaveCount = Object.values(emp.cells || {}).filter(
                   c => c !== null && c?.leave_status === 'Approved'
                 ).length;
