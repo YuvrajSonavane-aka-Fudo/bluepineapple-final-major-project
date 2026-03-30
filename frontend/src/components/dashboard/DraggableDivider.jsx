@@ -3,7 +3,7 @@ import { Box } from '@mui/material';
 
 export default function DraggableDivider({ onResize }) {
   const dragging = useRef(false);
-  const pending  = useRef(null);  
+  const pending  = useRef(null);
 
   // Flush pending position on the next animation frame.
   const scheduleFlush = useCallback(() => {
@@ -43,6 +43,9 @@ export default function DraggableDivider({ onResize }) {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       sx={{
+        // ✅ position: relative + full viewport width via negative margins
+        // so the divider always spans the full content area regardless of
+        // whether the legend panel is open or closed
         height: '3px',
         flexShrink: 0,
         cursor: 'row-resize',
@@ -51,7 +54,10 @@ export default function DraggableDivider({ onResize }) {
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
-        willChange: 'background', // hint to browser — avoids composite layer recalc
+        willChange: 'background',
+        // ✅ Key fix: stretch divider to fill only the non-legend area
+        // by ignoring width changes from the legend panel
+        alignSelf: 'stretch',
         '&:hover':  { background: '#c8cdd6' },
         '&:active': { background: '#b0b6c3' },
         '&::after': {

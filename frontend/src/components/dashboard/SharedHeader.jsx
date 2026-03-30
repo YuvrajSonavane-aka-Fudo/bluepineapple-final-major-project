@@ -41,6 +41,7 @@ export default function SharedHeader({
   projScrollRef,
   legendVisible,
   onToggleLegend,
+  legendToggleBtnRef,   // ✅ ref attached to toggle btn so Dashboard outside-click can ignore it
 }) {
   const isMobile = useIsMobile();
   const FW = useFrozenWidth();
@@ -71,12 +72,29 @@ export default function SharedHeader({
   const syncAll = useCallback((scrollLeft) => {
     if (syncing.current) return;
     syncing.current = true;
-    if (headerRef.current)   headerRef.current.scrollLeft   = scrollLeft;
-    if (empScrollRef?.current)  empScrollRef.current.scrollLeft  = scrollLeft;
-    if (projScrollRef?.current) projScrollRef.current.scrollLeft = scrollLeft;
+    if (headerRef.current)      headerRef.current.scrollLeft      = scrollLeft;
+    if (empScrollRef?.current)  empScrollRef.current.scrollLeft   = scrollLeft;
+    if (projScrollRef?.current) projScrollRef.current.scrollLeft  = scrollLeft;
     updateThumb(scrollLeft);
     syncing.current = false;
   }, [empScrollRef, projScrollRef, updateThumb]);
+
+  // ✅ Mouse wheel on the date strip scrolls horizontally
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      // Use deltaY for vertical wheel (normal mouse) → scroll horizontally
+      // Use deltaX for horizontal swipe (touchpad)
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (delta === 0) return;
+      e.preventDefault();
+      const current = el.scrollLeft || 0;
+      syncAll(Math.max(0, current + delta));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [syncAll]);
 
   // Thumb drag
   useEffect(() => {
@@ -156,60 +174,56 @@ export default function SharedHeader({
     }}>
       {/* Legend toggle — desktop only; mobile uses FAB */}
       <Box
-  component="button"
-  onClick={onToggleLegend}
-  sx={{
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    transform: 'translateY(-50%)',
+        ref={legendToggleBtnRef}
+        component="button"
+        onClick={onToggleLegend}
+        sx={{
+          position: 'absolute',
+          right: legendVisible ? 230 : 10,
+          transition: 'right 0.3s cubic-bezier(0.4,0,0.2,1)',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: 32,
+          height: 32,
+          background: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          display: { xs: 'none', md: 'flex' },
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#6b7280',
+          p: 0,
+          zIndex: 101,
+          boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            background: '#f9fafb',
+            color: '#374151',
+            transform: 'translateY(-50%) scale(1.1)',
+          },
+          '&:active': {
+            transform: 'translateY(-50%) scale(0.96)',
+          }
+        }}
+        title={legendVisible ? 'Hide Legend' : 'Show Legend'}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          style={{
+            transition: 'transform 0.2s ease',
+            transform: legendVisible ? 'rotate(0deg)' : 'rotate(180deg)'
+          }}
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </Box>
 
-    width: 32,
-    height: 32,
-
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '50%',
-
-    cursor: 'pointer',
-    display: { xs: 'none', md: 'flex' },
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    color: '#6b7280',
-    p: 0,
-    zIndex: 101,
-
-    boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
-    transition: 'all 0.2s ease',
-
-    '&:hover': {
-      background: '#f9fafb',
-      color: '#374151',
-      transform: 'translateY(-50%) scale(1.1)',
-    },
-
-    '&:active': {
-      transform: 'translateY(-50%) scale(0.96)',
-    }
-  }}
-  title={legendVisible ? 'Hide Legend' : 'Show Legend'}
->
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    style={{
-      transition: 'transform 0.2s ease',
-      transform: legendVisible ? 'rotate(0deg)' : 'rotate(180deg)'
-    }}
-  >
-    <polyline points="9,18 15,12 9,6" />
-  </svg>
-</Box>
       {/* Frozen column: ID label + global search + L.C. label */}
       <Box ref={frozenRef} sx={{
         width: FW, minWidth: FW, display: 'flex', alignItems: 'center', gap: isMobile ? 0.5 : 1,
@@ -217,7 +231,6 @@ export default function SharedHeader({
         background: '#f8f9fb', borderRight: '2px solid #c8cdd6',
         flexShrink: 0, height: '100%', boxSizing: 'border-box',
       }}>
-        {/* On desktop show "ID" label; on mobile skip it to save space */}
         {!isMobile && (
           <Tooltip title="Employee ID" arrow>
             <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0 }}>
@@ -249,7 +262,6 @@ export default function SharedHeader({
             </Box>
           )}
         </Box>
-        {/* L.C. label — hide on mobile, no room */}
         {!isMobile && (
           <Tooltip title="Leave Count" arrow>
             <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0, ml: 'auto', pr: 1 }}>
@@ -260,7 +272,8 @@ export default function SharedHeader({
       </Box>
 
       {/* Scrollable date strip + custom scrollbar thumb */}
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      {/* ✅ paddingRight leaves room for the legend button so it's never overlapped */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', pr: { xs: 0, md: '48px' } }}>
         <Box
           ref={headerRef}
           onScroll={e => syncAll(e.currentTarget.scrollLeft)}
@@ -268,6 +281,10 @@ export default function SharedHeader({
             flex: 1, overflowX: 'scroll', overflowY: 'hidden',
             height: HEADER_H, display: 'flex', alignItems: 'flex-start',
             scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
+            // ✅ Prevent text selection when mouse-dragging over date strip
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            cursor: 'default',
           }}
         >
           <DateStrip
@@ -287,8 +304,8 @@ export default function SharedHeader({
             ref={thumbRef}
             sx={{
               position: 'absolute', top: '50%', mt: '-0.5px', left: '1px',
-              width: THUMB_W, height: THUMB_H,
-              background: '#c0c7d4', borderRadius: THUMB_H / 2,
+              width: THUMB_W, height: '5px',
+              background: '#9aa0ad', borderRadius: THUMB_H / 2,
               cursor: 'grab', willChange: 'transform',
             }}
           />

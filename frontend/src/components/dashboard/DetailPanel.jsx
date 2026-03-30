@@ -308,12 +308,6 @@ function WFHRow({ children }) {
   );
 }
 
-function Avail({ hasLeave, isHalfDay, leaveType }) {
-  if (!hasLeave)                return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#16a34a' }}>Available</Typography>;
-  if (leaveType === 'WFH')      return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#059669' }}>WFH</Typography>;
-  if (isHalfDay)                return <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#d97706' }}>Partial</Typography>;
-  return                               <Typography sx={{ fontSize: 10, fontWeight: 600, color: '#dc2626' }}>Unavailable</Typography>;
-}
 
 function RiskTag({ risk }) {
   return <Chip label={risk} size="small" sx={{ height: 18, fontSize: 9, fontWeight: 700, background: RISK_BG[risk], color: RISK_COLOR[risk], borderRadius: '4px', '& .MuiChip-label': { px: '6px', py: 0 } }} />;

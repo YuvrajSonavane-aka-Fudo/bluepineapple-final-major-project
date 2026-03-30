@@ -49,7 +49,8 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
         </div>
       )}
 
-      <div style={{ display: 'flex', position: 'relative', zIndex: 100 }}>
+      {/*  Removed zIndex: 100 — it was creating a stacking context that blocked the legend button */}
+      <div style={{ display: 'flex', position: 'relative' }}>
         {dateStrip.map((d, i) => {
           const today     = isToday(parseISO(d.date));
           const isWeekend = d.is_weekend;
@@ -97,6 +98,7 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
                 borderBottom: (isHoliday && !isWeekend) ? '1px solid #fde68a' : '1px solid #e8eaed',
                 boxSizing: 'border-box', position: 'relative',
                 boxShadow: today ? 'inset 0 0 0 1px #994545' : 'none',
+                //  Only today cells get elevated zIndex — not the whole strip
                 zIndex: today ? 4 : 'auto',
               }}
             >
