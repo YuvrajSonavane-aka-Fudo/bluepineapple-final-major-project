@@ -63,8 +63,9 @@ export default function SharedHeader({
     if (scrollWidth <= clientWidth) { thumb.style.display = 'none'; return; }
     thumb.style.display = 'block';
     const trackW    = (scrollbarRef.current?.clientWidth || clientWidth) - 8;
+    const effectiveThumbW = Math.min(THUMB_W, trackW);
     const maxScroll = scrollWidth - clientWidth;
-    const maxThumbX = trackW - THUMB_W;
+    const maxThumbX = trackW - effectiveThumbW;
     const thumbX    = maxScroll > 0 ? (scrollLeft / maxScroll) * maxThumbX : 0;
     thumb.style.transform = `translateX(${thumbX + 4}px)`;
   }, []);
@@ -106,8 +107,9 @@ export default function SharedHeader({
       if (!container) return;
       const trackW    = (scrollbarRef.current?.clientWidth || container.clientWidth) - 8;
       const { scrollWidth, clientWidth } = container;
+      const effectiveThumbW = Math.min(THUMB_W, trackW);
       const maxScroll = scrollWidth - clientWidth;
-      const maxThumbX = trackW - THUMB_W;
+      const maxThumbX = trackW - effectiveThumbW;
       const dx        = e.clientX - startX;
       const newScroll = Math.max(0, Math.min(maxScroll, startScroll + (dx / maxThumbX) * maxScroll));
       syncAll(newScroll);
@@ -137,8 +139,9 @@ export default function SharedHeader({
     const clickX    = e.clientX - rect.left - 4;
     const trackW    = rect.width - 8;
     const { scrollWidth, clientWidth } = container;
+    const effectiveThumbW = Math.min(THUMB_W, trackW);
     const maxScroll = scrollWidth - clientWidth;
-    const newScroll = Math.max(0, Math.min(maxScroll, (clickX / trackW) * maxScroll));
+    const newScroll = Math.max(0, Math.min(maxScroll, (clickX / (trackW - effectiveThumbW)) * maxScroll));
     syncAll(newScroll);
   }, [syncAll]);
 
@@ -196,7 +199,7 @@ export default function SharedHeader({
           p: 0,
           zIndex: 101,
           boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
-          // transition: 'all 0.2s ease',
+          transition: 'all 0.2s ease',
           '&:hover': {
             background: '#f9fafb',
             color: '#374151',
@@ -298,13 +301,13 @@ export default function SharedHeader({
         <Box
           ref={scrollbarRef}
           onClick={onTrackClick}
-          sx={{ width: '100%', height: THUMB_H, position: 'relative', cursor: 'pointer', background: 'transparent' }}
+          sx={{ width: '100%', height: THUMB_H, position: 'relative', cursor: 'pointer', background: 'transparent', overflow: 'hidden' }}
         >
           <Box
             ref={thumbRef}
             sx={{
               position: 'absolute', top: '50%', mt: '-0.5px', left: '1px',
-              width: THUMB_W, height: '5px',
+              width: THUMB_W, maxWidth: 'calc(100% - 8px)', height: '5px',
               background: '#9aa0ad', borderRadius: THUMB_H / 2,
               cursor: 'grab', willChange: 'transform',
             }}

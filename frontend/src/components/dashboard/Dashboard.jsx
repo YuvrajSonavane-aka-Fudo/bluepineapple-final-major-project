@@ -36,19 +36,20 @@ export default function Dashboard() {
   const containerRef    = useRef(null);
   const empHeightRef    = useRef(null);
   const legendRef       = useRef(null);
-  // ✅ Ref to track the toggle button so outside-click handler can ignore it
+  // Ref to track the toggle button so outside-click handler can ignore it
   const legendToggleBtnRef = useRef(null);
 
   const empScrollRef    = useRef(null);
   const projScrollRef   = useRef(null);
   const headerScrollRef = useRef(null);
 
-  // ✅ Fix 1: exclude the toggle button from outside-click detection
-  // Previously the toggle button (in SharedHeader) was outside legendRef,
-  // so clicking it triggered both the outside-click close AND the toggle,
-  // causing it to flicker or never open/close correctly.
+  // Fix 1: exclude the toggle button from outside-click detection
+  // On mobile the FAB tap that opens the legend also bubbles a touchstart/touchend
+  // to the document. We guard with a longer delay (300ms) and only listen for
+  // mousedown on desktop so the FAB tap doesn't immediately re-close the sheet.
   useEffect(() => {
     if (!legendVisible) return;
+    // Desktop-only outside-click close (mobile uses the backdrop overlay instead)
     const handler = (e) => {
       const clickedInsideLegend = legendRef.current?.contains(e.target);
       const clickedToggleBtn    = legendToggleBtnRef.current?.contains(e.target);
@@ -56,16 +57,21 @@ export default function Dashboard() {
         setLegendVisible(false);
       }
     };
+    // Use a longer debounce so the opening tap/click doesn't immediately close
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handler);
-      document.addEventListener('touchstart', handler);
-    }, 50);
+      // Only add touchstart for desktop (non-touch pointer devices)
+      // On mobile the backdrop Box handles closing via its own onClick
+      if (!isMobile) {
+        document.addEventListener('touchstart', handler);
+      }
+    }, 300);
     return () => {
       clearTimeout(timer);
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('touchstart', handler);
     };
-  }, [legendVisible]);
+  }, [legendVisible, isMobile]);
 
   const handleResize = useCallback((clientY) => {
     if (!containerRef.current) return;
@@ -296,7 +302,13 @@ export default function Dashboard() {
   if (isMobile) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#f0f2f5' }}>
-        <MobileToolbar {...toolbarProps} />
+        <MobileToolbar
+          {...toolbarProps}
+          showAll={showAll} onShowAllChange={setShowAll}
+          hideWeekends={hideWeekends} onHideWeekendsChange={setHideWeekends}
+          empData={empData} projData={projData}
+          dateStrip={filteredDateStrip} exportFilters={exportFilters}
+        />
 
         <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch', position: 'relative' }}>
           <Box ref={containerRef} sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -360,7 +372,7 @@ export default function Dashboard() {
 
               {legendVisible && (
                 <Box
-                  onClick={() => setLegendVisible(false)}
+                  onPointerDown={(e) => { e.stopPropagation(); setLegendVisible(false); }}
                   sx={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.35)' }}
                 />
               )}
@@ -376,7 +388,9 @@ export default function Dashboard() {
                 transform: legendVisible ? 'translateY(0)' : 'translateY(100%)',
                 transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
                 paddingBottom: 'env(safe-area-inset-bottom)',
-              }}>
+              }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
                 <Box
                   onClick={() => setLegendVisible(false)}
                   sx={{ display: 'flex', justifyContent: 'center', pt: 1.25, pb: 0.5, flexShrink: 0, cursor: 'pointer' }}
@@ -398,6 +412,7 @@ export default function Dashboard() {
                     projData={projData}
                     dateStrip={filteredDateStrip}
                     filters={exportFilters}
+                    isMobile={true}
                   />
                 </Box>
               </Box>
@@ -422,7 +437,7 @@ export default function Dashboard() {
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch', position: 'relative' }}>
 
         {/*
-          containerRef now wraps ONLY the main content columns (header + panels + divider).
+         Fix 2: containerRef now wraps ONLY the main content columns (header + panels + divider).
           The legend panel is a sibling rendered via position:fixed so it never
           affects the flex layout — containerRef width stays constant regardless
           of legend open/close, so the divider never shifts.
@@ -463,7 +478,7 @@ export default function Dashboard() {
           </Box>
         </Box>
 
-        {/* Legend as position:fixed — completely outside flex flow so it never shifts the divider */}
+        {/* ✅ Legend as position:fixed — completely outside flex flow so it never shifts the divider */}
         <Box
           ref={legendRef}
           sx={{
