@@ -1,9 +1,14 @@
 // src/utils/dateUtils.js
 import {
-  startOfWeek, endOfWeek, startOfMonth, endOfMonth,
-  addDays, format, parseISO, isToday,
+  addDays, addWeeks, addMonths,
   startOfYear, endOfYear,
+  startOfMonth, endOfMonth,
+  startOfWeek, endOfWeek,
+  differenceInDays,
+  format, isToday, parseISO,
 } from 'date-fns';
+
+export { addDays, format, isToday, parseISO };
 
 export const fmt = (d) => format(d instanceof Date ? d : new Date(d), 'yyyy-MM-dd');
 
@@ -24,29 +29,44 @@ export const getYearRange = (anchor = new Date()) => ({
 
 export const getTodayRange = () => ({ start: new Date(), end: new Date() });
 
-export const shiftRange = (start, end, direction) => {
-  const s = start instanceof Date ? start : new Date(start);
-  const e = end   instanceof Date ? end   : new Date(end);
+export function shiftRange(start, end, direction) {
+  const dir = direction === 'forward' ? 1 : -1;
 
-  // Full calendar month → shift by one month (Mar→Apr not Mar→May)
-  const lastDay = new Date(e.getFullYear(), e.getMonth() + 1, 0).getDate();
-  const isFullMonth = s.getDate() === 1 && e.getDate() === lastDay
-    && s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth();
-  if (isFullMonth) {
-    const delta    = direction === 'forward' ? 1 : -1;
-    const raw      = s.getMonth() + delta;
-    const newYear  = s.getFullYear() + Math.floor(raw / 12);
-    const newMonth = ((raw % 12) + 12) % 12;
-    return { start: startOfMonth(new Date(newYear, newMonth, 1)), end: endOfMonth(new Date(newYear, newMonth, 1)) };
+  // ── Year range detection ──────────────────────────────
+  const isFullYear =
+    start.getDate()  === 1  && start.getMonth()  === 0 &&
+    end.getDate()    === 31 && end.getMonth()    === 11 &&
+    start.getFullYear() === end.getFullYear();
+
+  if (isFullYear) {
+    const newYear = start.getFullYear() + dir;
+    return { start: new Date(newYear, 0, 1), end: new Date(newYear, 11, 31) };
   }
 
-  // Otherwise shift by number of days — use noon to avoid timezone/DST off-by-one
-  const msPerDay = 1000 * 60 * 60 * 24;
-  const sNoon = new Date(s.getFullYear(), s.getMonth(), s.getDate(), 12);
-  const eNoon = new Date(e.getFullYear(), e.getMonth(), e.getDate(), 12);
-  const days  = Math.round((eNoon - sNoon) / msPerDay) + 1;
-  const delta = direction === 'forward' ? days : -days;
-  return { start: addDays(s, delta), end: addDays(e, delta) };
-};
+  // ── Month range detection ─────────────────────────────
+  const isFullMonth =
+    start.getDate() === 1 &&
+    end.getTime()   === endOfMonth(start).getTime();
 
-export { isToday, format, parseISO, addDays };
+  if (isFullMonth) {
+    const shifted = addMonths(start, dir);
+    return { start: startOfMonth(shifted), end: endOfMonth(shifted) };
+  }
+
+  // ── Week range detection ──────────────────────────────
+  const days = differenceInDays(end, start);
+  if (days === 6) {
+    const shifted = addWeeks(start, dir);
+    return {
+      start: startOfWeek(shifted, { weekStartsOn: 1 }),
+      end:   endOfWeek(shifted,   { weekStartsOn: 1 }),
+    };
+  }
+
+  // ── Default: shift by duration in days ───────────────
+  const duration = days + 1;
+  return {
+    start: addDays(start, dir * duration),
+    end:   addDays(end,   dir * duration),
+  };
+}

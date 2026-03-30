@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { format, addMonths, subMonths, startOfMonth,
-         startOfWeek, addDays, isSameDay, isSameMonth,
-         isWithinInterval, isBefore } from 'date-fns';
+import {
+  format, addMonths, subMonths, startOfMonth,
+  startOfWeek, addDays, isSameDay, isSameMonth,
+  isWithinInterval, isBefore
+} from 'date-fns';
 import { getWeekRange, getMonthRange, getTodayRange, getYearRange, shiftRange } from '../../utils/dateUtils';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -9,38 +11,38 @@ import {
   Checkbox, Tooltip, Dialog, DialogContent, DialogActions, Popover,
 } from '@mui/material';
 import FilterAltOffOutlinedIcon from '@mui/icons-material/FilterAltOffOutlined';
-import CachedOutlinedIcon       from '@mui/icons-material/CachedOutlined';
-import ChevronLeftIcon          from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon         from '@mui/icons-material/ChevronRight';
-import KeyboardArrowDownIcon    from '@mui/icons-material/KeyboardArrowDown';
-import CalendarTodayIcon        from '@mui/icons-material/CalendarToday';
-import LogoutIcon               from '@mui/icons-material/Logout';
-import FiberManualRecordIcon    from '@mui/icons-material/FiberManualRecord';
-import ErrorOutlineIcon         from '@mui/icons-material/ErrorOutline';
-import CloseIcon                from '@mui/icons-material/Close';
+import CachedOutlinedIcon from '@mui/icons-material/CachedOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import LogoutIcon from '@mui/icons-material/Logout';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CloseIcon from '@mui/icons-material/Close';
 
 /* ─────────────────────────────────────────────
    Mini Calendar
 ───────────────────────────────────────────── */
 function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDate, onDayClick, onDayHover }) {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [showYearPicker,  setShowYearPicker]  = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
 
-  const year  = viewDate.getFullYear();
+  const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
 
-  const firstDay  = startOfMonth(viewDate);
+  const firstDay = startOfMonth(viewDate);
   const gridStart = startOfWeek(firstDay, { weekStartsOn: 1 });
-  const days      = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+  const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
 
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
 
   const getDayState = (day) => {
     const isStart = tempStart && isSameDay(day, tempStart);
-    const isEnd   = tempEnd   && isSameDay(day, tempEnd);
-    let inRange   = false;
+    const isEnd = tempEnd && isSameDay(day, tempEnd);
+    let inRange = false;
     if (tempStart && tempEnd) {
       inRange = isWithinInterval(day, { start: tempStart, end: tempEnd });
     } else if (tempStart && hoverDate && !isBefore(hoverDate, tempStart)) {
@@ -54,7 +56,7 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
     fontSize: 12, fontWeight: 600, outline: 'none',
     background: isActive ? '#1e2d5a' : 'transparent',
     color: isActive ? '#fff' : '#374151',
-    '&:hover':         { background: isActive ? '#1e2d5a' : '#f0f2f5' },
+    '&:hover': { background: isActive ? '#1e2d5a' : '#f0f2f5' },
     '&:focus-visible': { background: isActive ? '#1e2d5a' : '#e8ecf5', outline: '2px solid #1e2d5a', outlineOffset: '1px' },
   });
 
@@ -107,7 +109,7 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
   const navBtnSx = {
     background: 'none', border: 'none', cursor: 'pointer', display: 'flex',
     alignItems: 'center', p: 0.25, borderRadius: '4px', color: '#6b7280', outline: 'none',
-    '&:hover':         { background: '#f0f2f5' },
+    '&:hover': { background: '#f0f2f5' },
     '&:focus-visible': { background: '#f0f2f5', outline: '2px solid #1e2d5a', outlineOffset: '1px' },
   };
 
@@ -115,7 +117,7 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
     background: 'none', border: '1px solid transparent', borderRadius: '4px',
     cursor: 'pointer', px: 0.75, py: 0.1, fontSize: 11, fontWeight: 700,
     color: '#1a1f2e', outline: 'none',
-    '&:hover':         { background: '#f0f2f5', borderColor: '#e5e7eb' },
+    '&:hover': { background: '#f0f2f5', borderColor: '#e5e7eb' },
     '&:focus-visible': { background: '#e8ecf5', borderColor: '#1e2d5a', outline: '2px solid #1e2d5a', outlineOffset: '1px' },
   };
 
@@ -127,7 +129,7 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
         </Box>
         <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
           <Box component="button" onClick={() => setShowMonthPicker(true)} sx={headerBtnSx}>{MONTHS[month]}</Box>
-          <Box component="button" onClick={() => setShowYearPicker(true)}  sx={headerBtnSx}>{year}</Box>
+          <Box component="button" onClick={() => setShowYearPicker(true)} sx={headerBtnSx}>{year}</Box>
         </Box>
         <Box component="button" onClick={() => onViewDateChange(addMonths(viewDate, 1))} sx={navBtnSx}>
           <ChevronRightIcon sx={{ fontSize: 14 }} />
@@ -135,7 +137,7 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
       </Box>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', mb: 0.1 }}>
-        {['M','T','W','T','F','S','S'].map((d, i) => (
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
           <Box key={i} sx={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: '#9aa0ad', py: 0.1 }}>{d}</Box>
         ))}
       </Box>
@@ -144,12 +146,12 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
         {days.map((day, i) => {
           const { isStart, isEnd, inRange, isOther } = getDayState(day);
           const isSelected = isStart || isEnd;
-          const isToday    = isSameDay(day, new Date());
+          const isToday = isSameDay(day, new Date());
 
           const rangeBg = (() => {
             if (!inRange) return {};
-            if (isStart && !isEnd)   return { left: '50%', right: 0 };
-            if (isEnd   && !isStart) return { left: 0, right: '50%' };
+            if (isStart && !isEnd) return { left: '50%', right: 0 };
+            if (isEnd && !isStart) return { left: 0, right: '50%' };
             return { left: 0, right: 0 };
           })();
 
@@ -193,10 +195,10 @@ function DateRangePicker({ anchorEl, onClose, startDate, endDate, onApply }) {
   const open = Boolean(anchorEl);
 
   const [tempStart, setTempStart] = useState(null);
-  const [tempEnd,   setTempEnd]   = useState(null);
+  const [tempEnd, setTempEnd] = useState(null);
   const [selecting, setSelecting] = useState('start');
   const [hoverDate, setHoverDate] = useState(null);
-  const [viewDate,  setViewDate]  = useState(new Date());
+  const [viewDate, setViewDate] = useState(new Date());
 
   useEffect(() => {
     if (open) {
@@ -208,22 +210,43 @@ function DateRangePicker({ anchorEl, onClose, startDate, endDate, onApply }) {
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDayClick = (day) => {
-    if (selecting === 'start') {
-      setTempStart(day); setTempEnd(null); setSelecting('end');
-    } else {
-      if (isBefore(day, tempStart)) { setTempEnd(tempStart); setTempStart(day); }
-      else { setTempEnd(day); }
-      setSelecting('start');
-    }
-  };
+  // const handleDayClick = (day) => {
+  //   if (selecting === 'start') {
+  //     setTempStart(day); setTempEnd(null); setSelecting('end');
+  //   } else {
+  //     if (isBefore(day, tempStart)) { setTempEnd(tempStart); setTempStart(day); }
+  //     else { setTempEnd(day); }
+  //     setSelecting('start');
+  //   }
+  // };
 
   const handleApply = () => {
     const s = tempStart;
     const e = tempEnd || tempStart;
     if (s) { onApply(s, e); onClose(); }
   };
+  // ─── REPLACE handleDayClick inside DateRangePicker ───
 
+  const handleDayClick = (day) => {
+    if (selecting === 'start') {
+      setTempStart(day);
+      // Preserve end date UNLESS new start would be after it (invalid range)
+      if (tempEnd && isBefore(tempEnd, day)) {
+        setTempEnd(null);
+      }
+      setSelecting('end');
+    } else {
+      // Clicked a day before current start → swap: new day = start, old start = end
+      if (isBefore(day, tempStart)) {
+        setTempEnd(tempStart);
+        setTempStart(day);
+      } else {
+        // Normal case: set end date, preserve start
+        setTempEnd(day);
+      }
+      setSelecting('start');
+    }
+  };
   const fmtLabel = (d) => d ? format(d, 'MMM d, yyyy') : '—';
 
   return (
@@ -247,7 +270,7 @@ function DateRangePicker({ anchorEl, onClose, startDate, endDate, onApply }) {
       <Box sx={{ display: 'flex', px: 1, py: 0.75, gap: 0.5, background: '#f8f9fb', borderBottom: '1px solid #f0f2f5' }}>
         {[
           { label: 'Start', val: tempStart, active: selecting === 'start', onClick: () => setSelecting('start') },
-          { label: 'End',   val: tempEnd,   active: selecting === 'end',   onClick: () => { if (tempStart) setSelecting('end'); } },
+          { label: 'End', val: tempEnd, active: selecting === 'end', onClick: () => { if (tempStart) setSelecting('end'); } },
         ].map(({ label, val, active, onClick }) => (
           <Box key={label} onClick={onClick} sx={{
             flex: 1, py: '4px', px: '6px', borderRadius: '6px', cursor: 'pointer',
@@ -320,36 +343,36 @@ export default function Toolbar({
   onRefresh, onClear, loading,
 }) {
   const { logout } = useAuth();
-  const [projAnchor,       setProjAnchor]       = useState(null);
-  const [statusAnchor,     setStatusAnchor]     = useState(null);
-  const [typeAnchor,       setTypeAnchor]       = useState(null);
-  const [showLogout,       setShowLogout]       = useState(false);
+  const [projAnchor, setProjAnchor] = useState(null);
+  const [statusAnchor, setStatusAnchor] = useState(null);
+  const [typeAnchor, setTypeAnchor] = useState(null);
+  const [showLogout, setShowLogout] = useState(false);
   const [datePickerAnchor, setDatePickerAnchor] = useState(null);
-  const [dateError,        setDateError]        = useState(null);
-  const [lastQuickFilter,  setLastQuickFilter]  = useState(null);
+  const [dateError, setDateError] = useState(null);
+  const [lastQuickFilter, setLastQuickFilter] = useState(null);
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
-  const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
+  const ALL_TYPES = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
 
   const getActiveFilter = () => {
     const same = (d1, d2) => d1.toDateString() === d2.toDateString();
     if (same(startDate, getTodayRange().start) && same(endDate, getTodayRange().end)) return 'T';
-    if (same(startDate, getWeekRange().start)  && same(endDate, getWeekRange().end))  return 'W';
+    if (same(startDate, getWeekRange().start) && same(endDate, getWeekRange().end)) return 'W';
     if (same(startDate, getMonthRange().start) && same(endDate, getMonthRange().end)) return 'M';
-    if (same(startDate, getYearRange().start)  && same(endDate, getYearRange().end))  return 'Y';
+    if (same(startDate, getYearRange().start) && same(endDate, getYearRange().end)) return 'Y';
     return null;
   };
 
   // Exact match wins; arrow-key navigation keeps last clicked filter highlighted
   const activeFilter = getActiveFilter() ?? lastQuickFilter;
-  const fmtDisplay   = (d) => format(d instanceof Date ? d : new Date(d), 'MMM dd, yyyy');
+  const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'MMM dd, yyyy');
 
   const toggleArr = (arr, val, setter) => {
     setter(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
   };
 
   const isAllSelected = (arr, all) => arr.length === 0 || arr.length === all.length;
-  const activeLabel   = (arr, all, label) => {
+  const activeLabel = (arr, all, label) => {
     if (isAllSelected(arr, all)) return label;
     return arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
   };
@@ -362,9 +385,9 @@ export default function Toolbar({
 
   const QUICK = [
     { label: 'T', tooltip: 'Today', fn: () => { const r = getTodayRange(); handleRangeChange(r.start, r.end); setLastQuickFilter('T'); } },
-    { label: 'W', tooltip: 'Week',  fn: () => { const r = getWeekRange();  handleRangeChange(r.start, r.end); setLastQuickFilter('W'); } },
+    { label: 'W', tooltip: 'Week', fn: () => { const r = getWeekRange(); handleRangeChange(r.start, r.end); setLastQuickFilter('W'); } },
     { label: 'M', tooltip: 'Month', fn: () => { const r = getMonthRange(); handleRangeChange(r.start, r.end); setLastQuickFilter('M'); } },
-    { label: 'Y', tooltip: 'Year',  fn: () => { const r = getYearRange();  handleRangeChange(r.start, r.end); setLastQuickFilter('Y'); } },
+    { label: 'Y', tooltip: 'Year', fn: () => { const r = getYearRange(); handleRangeChange(r.start, r.end); setLastQuickFilter('Y'); } },
   ];
 
   const btnSx = {
@@ -395,10 +418,10 @@ export default function Toolbar({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexShrink: 0 }}>
           <Box sx={{ width: 32, height: 32, background: 'rgba(255,255,255,0.15)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <rect x="3"  y="3"  width="8" height="8" rx="2" fill="white"/>
-              <rect x="13" y="3"  width="8" height="8" rx="2" fill="white" opacity="0.5"/>
-              <rect x="3"  y="13" width="8" height="8" rx="2" fill="white" opacity="0.5"/>
-              <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.8"/>
+              <rect x="3" y="3" width="8" height="8" rx="2" fill="white" />
+              <rect x="13" y="3" width="8" height="8" rx="2" fill="white" opacity="0.5" />
+              <rect x="3" y="13" width="8" height="8" rx="2" fill="white" opacity="0.5" />
+              <rect x="13" y="13" width="8" height="8" rx="2" fill="white" opacity="0.8" />
             </svg>
           </Box>
           <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 14, letterSpacing: '-0.2px' }}>Leave Impact Dashboard</Typography>
@@ -407,7 +430,7 @@ export default function Toolbar({
         {/* Center */}
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center' }}>
           <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline' }}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline' }}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
             Filters:
           </Typography>
 
@@ -447,9 +470,9 @@ export default function Toolbar({
               <Tooltip key={label} title={tooltip} placement="bottom">
                 <Button onClick={fn} sx={{
                   minWidth: 0, px: 1.25, py: 0.5, borderRadius: '5px', fontSize: 11, fontWeight: 700,
-                  color:      activeFilter === label ? '#fff' : 'rgba(255,255,255,0.7)',
+                  color: activeFilter === label ? '#fff' : 'rgba(255,255,255,0.7)',
                   background: activeFilter === label ? 'rgba(255,255,255,0.25)' : 'transparent',
-                  '&:hover':  { background: 'rgba(255,255,255,0.15)' },
+                  '&:hover': { background: 'rgba(255,255,255,0.15)' },
                 }}>{label}</Button>
               </Tooltip>
             ))}
