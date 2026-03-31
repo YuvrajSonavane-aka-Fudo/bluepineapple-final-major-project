@@ -19,6 +19,7 @@ class User(models.Model):
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
+    allocated_leaves = models.IntegerField(default = 0)
 
     class Meta:
         managed  = True
