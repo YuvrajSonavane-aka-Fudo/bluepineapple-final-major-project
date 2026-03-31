@@ -195,6 +195,7 @@ def dashboard_employees(request):
                 "user_id" : emp.id,
                 "full_name":emp.full_name,
                 "role":emp.role,
+                "allocated_leaves" : emp.allocated_leaves,
                 "cells":cells,
             }
         )
