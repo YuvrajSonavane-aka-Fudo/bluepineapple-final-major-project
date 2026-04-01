@@ -352,7 +352,7 @@ export default function Toolbar({
   const [lastQuickFilter, setLastQuickFilter] = useState(null);
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
-  const ALL_TYPES = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
+  const ALL_TYPES = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'COMP Off', 'AU', 'Other'];
 
   const getActiveFilter = () => {
     const same = (d1, d2) => d1.toDateString() === d2.toDateString();

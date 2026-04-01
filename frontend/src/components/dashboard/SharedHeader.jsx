@@ -28,6 +28,15 @@ function useFrozenWidth() {
   return fw;
 }
 
+// Show LC whenever start and end fall in the same calendar year.
+// If they span two different years (e.g. Dec 2025 – Jan 2026) show —.
+function isSameYear(startDate, endDate) {
+  if (!startDate || !endDate) return false;
+  const s = startDate instanceof Date ? startDate : new Date(startDate);
+  const e = endDate   instanceof Date ? endDate   : new Date(endDate);
+  return s.getFullYear() === e.getFullYear();
+}
+
 export default function SharedHeader({
   dateStrip = [],
   projectCells = {},
@@ -41,16 +50,26 @@ export default function SharedHeader({
   projScrollRef,
   legendVisible,
   onToggleLegend,
-  legendToggleBtnRef,   //  ref attached to toggle btn so Dashboard outside-click can ignore it
+  legendToggleBtnRef,
+  startDate,
+  endDate,
 }) {
   const isMobile = useIsMobile();
   const FW = useFrozenWidth();
+
+  const sameYear = isSameYear(startDate, endDate);
+
+  // Column header always shows "L.C"
+  // Tooltip explains what the column means and when it's active
+  const lcTooltip = sameYear
+    ? 'Leave Count — taken / allocated (same-year range)'
+    : 'Leave Count shown only when start and end are in the same year';
+
   const headerRef    = useRef(null);
   const scrollbarRef = useRef(null);
   const thumbRef     = useRef(null);
   const syncing      = useRef(false);
 
-  // Expose headerRef as scrollRef so panels can drive this header
   useEffect(() => {
     if (scrollRef) scrollRef.current = headerRef.current;
   });
@@ -62,42 +81,37 @@ export default function SharedHeader({
     const { scrollWidth, clientWidth } = container;
     if (scrollWidth <= clientWidth) { thumb.style.display = 'none'; return; }
     thumb.style.display = 'block';
-    const trackW    = (scrollbarRef.current?.clientWidth || clientWidth) - 8;
+    const trackW          = (scrollbarRef.current?.clientWidth || clientWidth) - 8;
     const effectiveThumbW = Math.min(THUMB_W, trackW);
-    const maxScroll = scrollWidth - clientWidth;
-    const maxThumbX = trackW - effectiveThumbW;
-    const thumbX    = maxScroll > 0 ? (scrollLeft / maxScroll) * maxThumbX : 0;
+    const maxScroll       = scrollWidth - clientWidth;
+    const maxThumbX       = trackW - effectiveThumbW;
+    const thumbX          = maxScroll > 0 ? (scrollLeft / maxScroll) * maxThumbX : 0;
     thumb.style.transform = `translateX(${thumbX + 4}px)`;
   }, []);
 
   const syncAll = useCallback((scrollLeft) => {
     if (syncing.current) return;
     syncing.current = true;
-    if (headerRef.current)      headerRef.current.scrollLeft      = scrollLeft;
-    if (empScrollRef?.current)  empScrollRef.current.scrollLeft   = scrollLeft;
-    if (projScrollRef?.current) projScrollRef.current.scrollLeft  = scrollLeft;
+    if (headerRef.current)      headerRef.current.scrollLeft     = scrollLeft;
+    if (empScrollRef?.current)  empScrollRef.current.scrollLeft  = scrollLeft;
+    if (projScrollRef?.current) projScrollRef.current.scrollLeft = scrollLeft;
     updateThumb(scrollLeft);
     syncing.current = false;
   }, [empScrollRef, projScrollRef, updateThumb]);
 
-  //  Mouse wheel on the date strip scrolls horizontally
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
     const handler = (e) => {
-      // Use deltaY for vertical wheel (normal mouse) → scroll horizontally
-      // Use deltaX for horizontal swipe (touchpad)
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       if (delta === 0) return;
       e.preventDefault();
-      const current = el.scrollLeft || 0;
-      syncAll(Math.max(0, current + delta));
+      syncAll(Math.max(0, (el.scrollLeft || 0) + delta));
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
   }, [syncAll]);
 
-  // Thumb drag
   useEffect(() => {
     const thumb = thumbRef.current;
     if (!thumb) return;
@@ -105,13 +119,13 @@ export default function SharedHeader({
     const onMouseMove = (e) => {
       const container = headerRef.current;
       if (!container) return;
-      const trackW    = (scrollbarRef.current?.clientWidth || container.clientWidth) - 8;
+      const trackW          = (scrollbarRef.current?.clientWidth || container.clientWidth) - 8;
       const { scrollWidth, clientWidth } = container;
       const effectiveThumbW = Math.min(THUMB_W, trackW);
-      const maxScroll = scrollWidth - clientWidth;
-      const maxThumbX = trackW - effectiveThumbW;
-      const dx        = e.clientX - startX;
-      const newScroll = Math.max(0, Math.min(maxScroll, startScroll + (dx / maxThumbX) * maxScroll));
+      const maxScroll       = scrollWidth - clientWidth;
+      const maxThumbX       = trackW - effectiveThumbW;
+      const dx              = e.clientX - startX;
+      const newScroll       = Math.max(0, Math.min(maxScroll, startScroll + (dx / maxThumbX) * maxScroll));
       syncAll(newScroll);
     };
     const onMouseUp = () => {
@@ -135,13 +149,13 @@ export default function SharedHeader({
     if (e.target === thumbRef.current) return;
     const container = headerRef.current;
     if (!container) return;
-    const rect      = scrollbarRef.current.getBoundingClientRect();
-    const clickX    = e.clientX - rect.left - 4;
-    const trackW    = rect.width - 8;
+    const rect            = scrollbarRef.current.getBoundingClientRect();
+    const clickX          = e.clientX - rect.left - 4;
+    const trackW          = rect.width - 8;
     const { scrollWidth, clientWidth } = container;
     const effectiveThumbW = Math.min(THUMB_W, trackW);
-    const maxScroll = scrollWidth - clientWidth;
-    const newScroll = Math.max(0, Math.min(maxScroll, (clickX / (trackW - effectiveThumbW)) * maxScroll));
+    const maxScroll       = scrollWidth - clientWidth;
+    const newScroll       = Math.max(0, Math.min(maxScroll, (clickX / (trackW - effectiveThumbW)) * maxScroll));
     syncAll(newScroll);
   }, [syncAll]);
 
@@ -152,7 +166,6 @@ export default function SharedHeader({
     return () => ro.disconnect();
   }, [updateThumb, dateStrip]);
 
-  // Wheel on the frozen col
   const frozenRef = useRef(null);
   useEffect(() => {
     const el = frozenRef.current;
@@ -160,8 +173,7 @@ export default function SharedHeader({
     const handler = (e) => {
       if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
       e.preventDefault();
-      const current = headerRef.current?.scrollLeft || 0;
-      syncAll(Math.max(0, current + e.deltaX));
+      syncAll(Math.max(0, (headerRef.current?.scrollLeft || 0) + e.deltaX));
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
@@ -175,7 +187,7 @@ export default function SharedHeader({
       background: '#f8f9fb',
       zIndex: 20,
     }}>
-      {/* Legend toggle — desktop only; mobile uses FAB */}
+      {/* Legend toggle — desktop only */}
       <Box
         ref={legendToggleBtnRef}
         component="button"
@@ -186,47 +198,27 @@ export default function SharedHeader({
           transition: 'right 0.3s cubic-bezier(0.4,0,0.2,1)',
           top: '50%',
           transform: 'translateY(-50%)',
-          width: 32,
-          height: 32,
+          width: 32, height: 32,
           background: '#ffffff',
           border: '1px solid #e5e7eb',
           borderRadius: '50%',
           cursor: 'pointer',
           display: { xs: 'none', md: 'flex' },
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#6b7280',
-          p: 0,
-          zIndex: 101,
+          alignItems: 'center', justifyContent: 'center',
+          color: '#6b7280', p: 0, zIndex: 101,
           boxShadow: '0 3px 10px rgba(0,0,0,0.12)',
-          '&:hover': {
-            background: '#f9fafb',
-            color: '#374151',
-            transform: 'translateY(-50%) scale(1.1)',
-          },
-          '&:active': {
-            transform: 'translateY(-50%) scale(0.96)',
-          }
+          '&:hover': { background: '#f9fafb', color: '#374151', transform: 'translateY(-50%) scale(1.1)' },
+          '&:active': { transform: 'translateY(-50%) scale(0.96)' },
         }}
         title={legendVisible ? 'Hide Legend' : 'Show Legend'}
       >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          style={{
-            transition: 'transform 0.2s ease',
-            transform: legendVisible ? 'rotate(0deg)' : 'rotate(180deg)'
-          }}
-        >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+          style={{ transition: 'transform 0.2s ease', transform: legendVisible ? 'rotate(0deg)' : 'rotate(180deg)' }}>
           <polyline points="9,18 15,12 9,6" />
         </svg>
       </Box>
 
-      {/* Frozen column: ID label + global search + L.C. label */}
+      {/* Frozen column */}
       <Box ref={frozenRef} sx={{
         width: FW, minWidth: FW, display: 'flex', alignItems: 'center', gap: isMobile ? 0.5 : 1,
         px: isMobile ? 0.75 : 1.5, pl: isMobile ? '8px' : '21px',
@@ -240,6 +232,7 @@ export default function SharedHeader({
             </Typography>
           </Tooltip>
         )}
+
         <Box sx={{
           flex: 1, display: 'flex', alignItems: 'center', gap: 0.5,
           background: '#ffffff', border: '1px solid #e8eaed', borderRadius: '6px',
@@ -255,26 +248,28 @@ export default function SharedHeader({
             sx={{ flex: 1, fontSize: isMobile ? 11 : 12, color: '#1a1f2e', minWidth: 0, '& input': { p: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" } }}
           />
           {globalSearch && (
-            <Box
-              component="button"
-              onClick={() => onGlobalSearchChange('')}
-              sx={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#9aa0ad', p: 0, flexShrink: 0 }}
-            >
+            <Box component="button" onClick={() => onGlobalSearchChange('')}
+              sx={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#9aa0ad', p: 0, flexShrink: 0 }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </Box>
           )}
         </Box>
+
         {!isMobile && (
-          <Tooltip title="Leave Count" arrow>
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#5a6272', letterSpacing: '0.3px', textTransform: 'uppercase', flexShrink: 0, ml: 'auto', pr: 1 }}>
-              L.C.
+          <Tooltip title={lcTooltip} arrow>
+            <Typography sx={{
+              fontSize: 12, fontWeight: 700,
+              color: sameYear ? '#5a6272' : '#c8cdd6',  // dim when not applicable
+              letterSpacing: '0.3px', flexShrink: 0, ml: 'auto', pr: 1,
+              cursor: 'default',
+            }}>
+              L.C
             </Typography>
           </Tooltip>
         )}
       </Box>
 
-      {/* Scrollable date strip + custom scrollbar thumb */}
-      {/* paddingRight leaves room for the legend button so it's never overlapped */}
+      {/* Scrollable date strip */}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <Box
           ref={headerRef}
@@ -283,10 +278,7 @@ export default function SharedHeader({
             flex: 1, overflowX: 'scroll', overflowY: 'hidden',
             height: HEADER_H, display: 'flex', alignItems: 'flex-start',
             scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
-            //  Prevent text selection when mouse-dragging over date strip
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-            cursor: 'default',
+            userSelect: 'none', WebkitUserSelect: 'none', cursor: 'default',
           }}
         >
           <DateStrip

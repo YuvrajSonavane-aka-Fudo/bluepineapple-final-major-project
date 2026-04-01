@@ -13,6 +13,9 @@ import DetailPanel        from './DetailPanel';
 import Legend             from './Legend';
 import SharedHeader       from './SharedHeader';
 
+// Any leave_type from backend NOT in this list is treated as "Other".
+const KNOWN_LEAVE_TYPES = ['Paid', 'Unpaid', 'WFH', 'COMP Off', 'AU'];
+
 export default function Dashboard() {
   const { logout } = useAuth();
   const isMobile = useMediaQuery('(max-width:768px)');
@@ -33,38 +36,24 @@ export default function Dashboard() {
   const [detailCtx,       setDetailCtx]       = useState(null);
   const [legendVisible,   setLegendVisible]   = useState(false);
 
-  const containerRef    = useRef(null);
-  const empHeightRef    = useRef(null);
-  const legendRef       = useRef(null);
-  // Ref to track the toggle button so outside-click handler can ignore it
+  const containerRef       = useRef(null);
+  const empHeightRef       = useRef(null);
+  const legendRef          = useRef(null);
   const legendToggleBtnRef = useRef(null);
+  const empScrollRef       = useRef(null);
+  const projScrollRef      = useRef(null);
+  const headerScrollRef    = useRef(null);
 
-  const empScrollRef    = useRef(null);
-  const projScrollRef   = useRef(null);
-  const headerScrollRef = useRef(null);
-
-  // Fix 1: exclude the toggle button from outside-click detection
-  // On mobile the FAB tap that opens the legend also bubbles a touchstart/touchend
-  // to the document. We guard with a longer delay (300ms) and only listen for
-  // mousedown on desktop so the FAB tap doesn't immediately re-close the sheet.
   useEffect(() => {
     if (!legendVisible) return;
-    // Desktop-only outside-click close (mobile uses the backdrop overlay instead)
     const handler = (e) => {
       const clickedInsideLegend = legendRef.current?.contains(e.target);
       const clickedToggleBtn    = legendToggleBtnRef.current?.contains(e.target);
-      if (!clickedInsideLegend && !clickedToggleBtn) {
-        setLegendVisible(false);
-      }
+      if (!clickedInsideLegend && !clickedToggleBtn) setLegendVisible(false);
     };
-    // Use a longer debounce so the opening tap/click doesn't immediately close
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handler);
-      // Only add touchstart for desktop (non-touch pointer devices)
-      // On mobile the backdrop Box handles closing via its own onClick
-      if (!isMobile) {
-        document.addEventListener('touchstart', handler);
-      }
+      if (!isMobile) document.addEventListener('touchstart', handler);
     }, 300);
     return () => {
       clearTimeout(timer);
@@ -87,18 +76,18 @@ export default function Dashboard() {
       .catch(err => { if (err?.response?.status === 401) logout(); });
   }, [logout]);
 
+  // leaveTypes and leaveStatuses excluded — all filtering is frontend-only, no refetch.
   const buildBody = useCallback(() => ({
     start_date:     fmt(startDate),
     end_date:       fmt(endDate),
     project_ids:    selectedProjIds,
-    leave_types:    leaveTypes.filter(t => t !== 'Half Day'),
-    leave_statuses: leaveStatuses,
-    is_half_day:    leaveTypes.includes('Half Day') && leaveTypes.length === 1 ? true : null,
-  }), [startDate, endDate, selectedProjIds, leaveTypes, leaveStatuses]);
+    leave_types:    [],
+    leave_statuses: [],
+    is_half_day:    null,
+  }), [startDate, endDate, selectedProjIds]);
 
   const fetchAll = useCallback(() => {
     const body = buildBody();
-
     setLoadingEmp(true);
     fetchEmployeeDashboard(body)
       .then(setEmpData)
@@ -134,10 +123,47 @@ export default function Dashboard() {
   );
 
   const { filteredEmployees, filteredProjects } = useMemo(() => {
+    const hasOther      = leaveTypes.includes('Other');
+    const hasHalfDay    = leaveTypes.includes('Half Day');
+    const knownSelected = leaveTypes.filter(t => t !== 'Other' && t !== 'Half Day');
+
+    const hasAnyTypeFilter   = leaveTypes.length > 0;
+    const hasAnyStatusFilter = leaveStatuses.length > 0;
+    const hasAnyFilter       = hasAnyTypeFilter || hasAnyStatusFilter;
     const q = globalSearch.trim().toLowerCase();
-    const allEmployees = empData.employees || [];
-    const allProjects  = projData.projects || [];
-    const hasAnyFilter = leaveTypes.length > 0 || leaveStatuses.length > 0;
+
+    // A cell passes if it matches ANY selected type condition AND the status filter.
+    // "Other" = any leave_type the backend sends that is NOT in KNOWN_LEAVE_TYPES
+    // e.g. backend sends leave_type='Sick' → treated as Other.
+    const passesTypeFilter = (cell) => {
+      if (!hasAnyTypeFilter) return true;
+      if (!cell) return false;
+      if (knownSelected.includes(cell.leave_type))                       return true;
+      if (hasOther && !KNOWN_LEAVE_TYPES.includes(cell.leave_type))      return true;
+      if (hasHalfDay && cell.is_half_day === true)                       return true;
+      return false;
+    };
+
+    const passesStatusFilter = (cell) => {
+      if (!hasAnyStatusFilter) return true;
+      if (!cell) return false;
+      return leaveStatuses.includes(cell.leave_status);
+    };
+
+    const passesCell = (cell) => {
+      if (!cell) return null;
+      return (passesTypeFilter(cell) && passesStatusFilter(cell)) ? cell : null;
+    };
+
+    const allEmployees = (empData.employees || []).map(emp => {
+      if (!hasAnyFilter) return emp;
+      const filteredCells = Object.fromEntries(
+        Object.entries(emp.cells || {}).map(([date, cell]) => [date, passesCell(cell)])
+      );
+      return { ...emp, cells: filteredCells };
+    });
+
+    const allProjects = projData.projects || [];
 
     const activeEmployees = hasAnyFilter
       ? allEmployees.filter(emp => Object.values(emp.cells || {}).some(c => c !== null))
@@ -153,6 +179,7 @@ export default function Dashboard() {
         if (cell) empCellDates.add(`${emp.user_id}::${date}`);
       })
     );
+
     const impactedProjects = allProjects.filter(p => {
       if (Object.values(p.cells || {}).some(cell => (cell?.employees_on_leave ?? 0) > 0)) return true;
       return (p.member_ids || []).some(uid =>
@@ -273,7 +300,6 @@ export default function Dashboard() {
     loading: loadingEmp || loadingProj,
   };
 
-  // Shared date strip header props
   const sharedHeaderProps = {
     dateStrip: filteredDateStrip,
     projectCells: projectCellsByDate,
@@ -294,8 +320,10 @@ export default function Dashboard() {
     projScrollRef,
     legendVisible,
     onToggleLegend: () => setLegendVisible(v => !v),
-    // Pass ref down so SharedHeader can attach it to the toggle button
     legendToggleBtnRef,
+    // ── Pass dates so SharedHeader can compute the LC column header ──
+    startDate,
+    endDate,
   };
 
   // ─── Mobile layout ───
@@ -326,6 +354,9 @@ export default function Dashboard() {
                 headerScrollRef={headerScrollRef}
                 projScrollRef={projScrollRef}
                 showAll={showAll || globalSearch.trim().length > 0}
+                // ── Pass dates so EmployeePanel can show taken/allocated ──
+                startDate={startDate}
+                endDate={endDate}
               />
             </Box>
 
@@ -345,7 +376,6 @@ export default function Dashboard() {
             </Box>
           </Box>
 
-          {/* Mobile Legend: FAB + bottom sheet */}
           {isMobile && (
             <>
               <Box
@@ -435,13 +465,6 @@ export default function Dashboard() {
       <Toolbar {...toolbarProps} />
 
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#ffffff', alignItems: 'stretch', position: 'relative' }}>
-
-        {/*
-         Fix 2: containerRef now wraps ONLY the main content columns (header + panels + divider).
-          The legend panel is a sibling rendered via position:fixed so it never
-          affects the flex layout — containerRef width stays constant regardless
-          of legend open/close, so the divider never shifts.
-        */}
         <Box
           ref={containerRef}
           sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
@@ -459,6 +482,9 @@ export default function Dashboard() {
               headerScrollRef={headerScrollRef}
               projScrollRef={projScrollRef}
               showAll={showAll}
+              // ── Pass dates so EmployeePanel can show taken/allocated ──
+              startDate={startDate}
+              endDate={endDate}
             />
           </Box>
 
@@ -478,12 +504,11 @@ export default function Dashboard() {
           </Box>
         </Box>
 
-        {/* ✅ Legend as position:fixed — completely outside flex flow so it never shifts the divider */}
         <Box
           ref={legendRef}
           sx={{
             position: 'fixed',
-            top: 52,        // below Toolbar height
+            top: 52,
             right: 0,
             bottom: 0,
             width: 220,
