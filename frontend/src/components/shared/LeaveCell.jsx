@@ -4,10 +4,13 @@ const LEAVE_COLOR = {
   'Paid':   '#2563EB',
   'Unpaid': '#93C5FD',
   'WFH':    '#59be68',
+  'COMP Off': '#09637E',
+  'AU': '#7AB2B2',
+  'Other': '#636CCB',
 };
 
 function getColor(leaveType) {
-  return LEAVE_COLOR[leaveType] ?? '#2563EB';
+  return LEAVE_COLOR[leaveType] ?? '#636CCB';
 }
 
 export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {

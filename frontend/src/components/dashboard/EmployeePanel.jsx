@@ -1,11 +1,20 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { parseISO, isToday } from 'date-fns';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Tooltip } from '@mui/material';
 import LeaveCell from '../shared/LeaveCell';
 
 const CELL_W       = 35;
 const ROW_H        = 35;
 const TODAY_BORDER = '#994545';
+
+// Show LC whenever start and end fall in the same calendar year.
+// If they span two different years (e.g. Dec 2025 – Jan 2026) show —.
+function isSameYear(startDate, endDate) {
+  if (!startDate || !endDate) return false;
+  const s = startDate instanceof Date ? startDate : new Date(startDate);
+  const e = endDate   instanceof Date ? endDate   : new Date(endDate);
+  return s.getFullYear() === e.getFullYear();
+}
 
 function useIsMobile() {
   const [mob, setMob] = useState(() => window.innerWidth < 768);
@@ -35,6 +44,8 @@ export default function EmployeePanel({
   headerScrollRef,
   projScrollRef,
   showAll = true,
+  startDate,
+  endDate,
 }) {
   const isMobile = useIsMobile();
   const FW = useFrozenWidth();
@@ -42,17 +53,16 @@ export default function EmployeePanel({
   const syncing  = useRef(false);
   const bodyRef  = useRef(null);
 
+  const showLC = isSameYear(startDate, endDate);
+
   const filtered = showAll
     ? employees
     : employees.filter(emp => Object.values(emp.cells || {}).some(c => c !== null));
 
-  // Clear stale refs whenever the filtered list length changes
-  // This prevents old row refs from being at wrong indices after showAll toggles
   useEffect(() => {
     rowRefs.current = rowRefs.current.slice(0, filtered.length);
   }, [filtered.length]);
 
-  // --- sync helper ---
   const syncAll = useCallback((scrollLeft) => {
     if (syncing.current) return;
     syncing.current = true;
@@ -62,18 +72,15 @@ export default function EmployeePanel({
     syncing.current = false;
   }, [headerScrollRef, projScrollRef]);
 
-  // Re-sync all rows to the current scroll position after filtered list changes
   useEffect(() => {
     const currentScroll = rowRefs.current.find(Boolean)?.scrollLeft ?? 0;
     syncAll(currentScroll);
   }, [filtered.length, syncAll]);
 
-  // Expose first row's scroll position via scrollRef so SharedHeader can init
   useEffect(() => {
     if (scrollRef) scrollRef.current = rowRefs.current[0] || null;
   });
 
-  // Horizontal wheel on body
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -81,14 +88,12 @@ export default function EmployeePanel({
       if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
       e.preventDefault();
       const first = rowRefs.current.find(Boolean);
-      const current = first?.scrollLeft || 0;
-      syncAll(Math.max(0, current + e.deltaX));
+      syncAll(Math.max(0, (first?.scrollLeft || 0) + e.deltaX));
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
   }, [syncAll]);
 
-  // Touch scroll sync (mobile swipe)
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -98,9 +103,7 @@ export default function EmployeePanel({
       startScroll = rowRefs.current.find(Boolean)?.scrollLeft || 0;
     };
     const onTouchMove = (e) => {
-      const dx = startX - e.touches[0].clientX;
-      const newScroll = Math.max(0, startScroll + dx);
-      syncAll(newScroll);
+      syncAll(Math.max(0, startScroll + (startX - e.touches[0].clientX)));
     };
     el.addEventListener('touchstart', onTouchStart, { passive: true });
     el.addEventListener('touchmove',  onTouchMove,  { passive: true });
@@ -121,9 +124,26 @@ export default function EmployeePanel({
           : filtered.length === 0
             ? <EmptyState searchValue={globalSearch} />
             : filtered.map((emp, idx) => {
-                const leaveCount = Object.values(emp.cells || {}).filter(
-                  c => c !== null && c?.leave_status === 'Approved'
-                ).length;
+                // Count approved leave days for this employee within the visible cells
+                let taken = 0;
+                Object.values(emp.cells || {}).forEach(c => {
+                  if (c && c.leave_status === 'Approved') {
+                    taken += c.is_half_day ? 0.5 : 1;
+                  }
+                });
+
+                const allocated = emp.allocated_leaves ?? 0;
+
+                // Show taken/allocated when same year, otherwise show —
+                const lcDisplay = showLC
+                  ? `${Number(taken.toFixed(1))}/${allocated}`
+                  : '—';
+
+                const lcTooltip = showLC
+                  ? `Taken ${taken} out of ${allocated} allocated leaves`
+                  : 'Leave count shown only when start and end are in the same year';
+
+                const isOverLimit = showLC && taken > allocated;
 
                 return (
                   <Box key={emp.user_id} sx={{ display: 'flex', alignItems: 'stretch' }}>
@@ -143,6 +163,7 @@ export default function EmployeePanel({
                       }}>
                         #{emp.user_id.toString().padStart(4, '0')}
                       </Typography>
+
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         {isMobile && (
                           <Typography sx={{ fontSize: 9, color: '#9aa0ad', fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
@@ -153,11 +174,26 @@ export default function EmployeePanel({
                           {emp.full_name}
                         </Typography>
                       </Box>
-                      <Box sx={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 99, px: isMobile ? '5px' : 1, py: '2px', flexShrink: 0 }}>
-                        <Typography sx={{ fontSize: isMobile ? 9 : 11, fontWeight: 700, color: '#4338ca', fontFamily: "'DM Mono', monospace" }}>
-                          {leaveCount.toFixed(1)}
-                        </Typography>
-                      </Box>
+
+                      {/* LC badge — always visible, dims when not a same-year range */}
+                      <Tooltip title={lcTooltip} arrow>
+                        <Box sx={{
+                          width: 60, minWidth: 60,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          border: `1px solid ${showLC ? (isOverLimit ? '#fca5a5' : '#e8eaed') : '#f0f0f0'}`,
+                          borderRadius: 6,
+                          background: showLC ? (isOverLimit ? '#fef2f2' : '#f8f9fb') : 'transparent',
+                          flexShrink: 0,
+                        }}>
+                          <Typography sx={{
+                            fontSize: isMobile ? 9 : 12,
+                            fontWeight: 700,
+                            color: !showLC ? '#c8cdd6' : isOverLimit ? '#dc2626' : '#5a6272',
+                          }}>
+                            {lcDisplay}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
                     </Box>
 
                     {/* Scrollable cells */}

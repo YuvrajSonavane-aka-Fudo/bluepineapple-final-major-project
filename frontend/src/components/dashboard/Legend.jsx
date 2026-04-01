@@ -6,6 +6,9 @@ const LEAVE_TYPES = [
   { label: 'Paid Leave',   color: '#2563EB' },
   { label: 'Unpaid Leave', color: '#93C5FD' },
   { label: 'WFH',          color: '#59be68' },
+  { label: 'COMP Off', color: '#09637E' },
+  { label: 'AU', color: '#7AB2B2' },
+  { label: 'Other', color: '#636CCB' },
 ];
 const DAY_PORTION = [
   { label: 'Full Day',    type: 'block' },

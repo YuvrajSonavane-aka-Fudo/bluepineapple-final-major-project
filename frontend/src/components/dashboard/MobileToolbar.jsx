@@ -384,7 +384,7 @@ export default function MobileToolbar({
   };
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
-  const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day'];
+  const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'COMP Off', 'AU', 'Other'];
 
   const isSameD = (d1, d2) => d1?.toDateString?.() === d2?.toDateString?.();
   const activeFilter = (() => {
