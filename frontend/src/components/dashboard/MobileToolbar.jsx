@@ -1,4 +1,3 @@
-// src/components/dashboard/MobileToolbar.jsx
 import { useState } from 'react';
 import { format, addMonths, subMonths, startOfMonth,
          startOfWeek, addDays, isSameDay, isSameMonth,
@@ -22,9 +21,7 @@ import CloseIcon                 from '@mui/icons-material/Close';
 import TuneIcon                  from '@mui/icons-material/Tune';
 import CalendarTodayIcon         from '@mui/icons-material/CalendarToday';
 
-/* ─────────────────────────────────────────────
-   Mini Calendar with tappable month/year nav
-───────────────────────────────────────────── */
+/* Mini Calendar with tappable month/year nav */
 function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDate, onDayClick, onDayHover }) {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showYearPicker,  setShowYearPicker]  = useState(false);
@@ -120,7 +117,6 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
         </Box>
 
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-          {/* Tap month → month picker */}
           <Box component="button" onClick={() => setShowMonthPicker(true)}
             sx={{
               background: 'none', border: '1px solid transparent', borderRadius: '6px',
@@ -130,7 +126,6 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
             }}>
             {MONTHS[month]}
           </Box>
-          {/* Tap year → year picker */}
           <Box component="button" onClick={() => setShowYearPicker(true)}
             sx={{
               background: 'none', border: '1px solid transparent', borderRadius: '6px',
@@ -162,7 +157,6 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
           const isSelected = isStart || isEnd;
           const isToday    = isSameDay(day, new Date());
 
-          // Range bar behind the circle
           const rangeBg = (() => {
             if (!inRange) return {};
             if (isStart && !isEnd)  return { left: '50%', right: 0 };
@@ -180,7 +174,6 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
                 cursor: 'pointer', background: 'none', p: 0,
               }}
             >
-              {/* Range highlight bar */}
               {inRange && (
                 <Box sx={{
                   position: 'absolute', top: 2, bottom: 2,
@@ -189,7 +182,6 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
                   zIndex: 0,
                 }} />
               )}
-              {/* Day circle */}
               <Box sx={{
                 position: 'relative', zIndex: 1,
                 width: 28, height: 28,
@@ -214,9 +206,7 @@ function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDat
   );
 }
 
-/* ─────────────────────────────────────────────
-   Date Range Picker Dialog
-───────────────────────────────────────────── */
+/* Date Range Picker Dialog */
 function DateRangePickerDialog({ open, onClose, startDate, endDate, onApply }) {
   const [tempStart, setTempStart] = useState(null);
   const [tempEnd,   setTempEnd]   = useState(null);
@@ -235,13 +225,18 @@ function DateRangePickerDialog({ open, onClose, startDate, endDate, onApply }) {
   const handleDayClick = (day) => {
     if (selecting === 'start') {
       setTempStart(day);
-      setTempEnd(null);
+      // Preserve end date UNLESS new start would be after it (invalid range)
+      if (tempEnd && isBefore(tempEnd, day)) {
+        setTempEnd(null);
+      }
       setSelecting('end');
     } else {
+      // Tapped a day before current start -> swap
       if (isBefore(day, tempStart)) {
         setTempEnd(tempStart);
         setTempStart(day);
       } else {
+        // Normal: set end, preserve start
         setTempEnd(day);
       }
       setSelecting('start');
@@ -354,9 +349,7 @@ function DateRangePickerDialog({ open, onClose, startDate, endDate, onApply }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   Main MobileToolbar
-───────────────────────────────────────────── */
+/* Main MobileToolbar */
 export default function MobileToolbar({
   startDate, endDate, onRangeChange,
   projects, selectedProjectIds, onProjectsChange,
@@ -384,7 +377,7 @@ export default function MobileToolbar({
   };
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
-  const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'COMP Off', 'AU', 'Other'];
+  const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'COMP OFF', 'AU', 'Other'];
 
   const isSameD = (d1, d2) => d1?.toDateString?.() === d2?.toDateString?.();
   const activeFilter = (() => {
@@ -494,7 +487,7 @@ export default function MobileToolbar({
         </IconButton>
       </Box>
 
-      {/* ROW 2 — ← Date Range → | T W | Filters */}
+      {/* ROW 2 : Date Range  | T W | Filters */}
       <Box sx={{
         height: 40, background: '#253870',
         display: 'flex', alignItems: 'center',
@@ -516,7 +509,7 @@ export default function MobileToolbar({
           <ChevronLeftIcon sx={{ fontSize: 16 }} />
         </Box>
 
-        {/* Date range pill — tap opens custom picker dialog */}
+        {/* Date range pill */}
         <Box component="button" onClick={() => setDatePickerOpen(true)}
           sx={{
             flex: 1, minWidth: 0, height: 26,
@@ -665,7 +658,7 @@ export default function MobileToolbar({
             ))}
           </FilterSection>
 
-          {/* Display toggles — moved from Legend for mobile */}
+          {/* Display toggles */}
           <FilterSection id="display" label="Display" badge={[showAll, hideWeekends].filter(Boolean).length}>
             {[
               { label: 'All Employees', val: showAll,      fn: () => onShowAllChange(!showAll) },

@@ -1,4 +1,3 @@
-// src/components/dashboard/Dashboard.jsx
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Box, Typography, useMediaQuery } from '@mui/material';
 import { fmt, getWeekRange } from '../../utils/dateUtils';
@@ -134,7 +133,7 @@ export default function Dashboard() {
 
     // A cell passes if it matches ANY selected type condition AND the status filter.
     // "Other" = any leave_type the backend sends that is NOT in KNOWN_LEAVE_TYPES
-    // e.g. backend sends leave_type='Sick' → treated as Other.
+    // e.g. backend sends leave_type='Sick' -> treated as Other.
     const passesTypeFilter = (cell) => {
       if (!hasAnyTypeFilter) return true;
       if (!cell) return false;
@@ -321,12 +320,11 @@ export default function Dashboard() {
     legendVisible,
     onToggleLegend: () => setLegendVisible(v => !v),
     legendToggleBtnRef,
-    // ── Pass dates so SharedHeader can compute the LC column header ──
-    startDate,
+    startDate, //  Pass dates so SharedHeader can compute the LC column header 
     endDate,
   };
 
-  // ─── Mobile layout ───
+  //  Mobile layout 
   if (isMobile) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#f0f2f5' }}>
@@ -354,7 +352,7 @@ export default function Dashboard() {
                 headerScrollRef={headerScrollRef}
                 projScrollRef={projScrollRef}
                 showAll={showAll || globalSearch.trim().length > 0}
-                // ── Pass dates so EmployeePanel can show taken/allocated ──
+                //  Pass dates so EmployeePanel can show taken/allocated 
                 startDate={startDate}
                 endDate={endDate}
               />
@@ -459,7 +457,7 @@ export default function Dashboard() {
     );
   }
 
-  // ─── Desktop layout ───
+  //  Desktop layout 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#f0f2f5' }}>
       <Toolbar {...toolbarProps} />
@@ -482,7 +480,7 @@ export default function Dashboard() {
               headerScrollRef={headerScrollRef}
               projScrollRef={projScrollRef}
               showAll={showAll}
-              // ── Pass dates so EmployeePanel can show taken/allocated ──
+              //  Pass dates so EmployeePanel can show taken/allocated 
               startDate={startDate}
               endDate={endDate}
             />

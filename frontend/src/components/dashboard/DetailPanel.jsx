@@ -13,9 +13,23 @@ function safeDate(d) {
 
 const LEAVE_COLORS = { Paid: '#2563eb', Unpaid: '#93c5fd', WFH: '#59be68' };
 
-// Consistent with LeaveCell: Pending = leave colour fill + bang sign overlay
-//                            Rejected = leave colour fill + red cross overlay
-// StatusIcon uses a fixed "Paid" blue swatch as the representative colour (matches legend)
+// Short display label for leave type
+function getShortLabel(leaveType) {
+  if (!leaveType) return '';
+  if (leaveType === 'COMP Off') return 'CO';
+  if (leaveType === 'AU')       return 'AU';
+  if (leaveType === 'Paid' || leaveType === 'Unpaid' || leaveType === 'WFH') return leaveType;
+  return 'O';
+}
+
+// Full name for tooltip — only needed when short form is used
+function getFullLabel(leaveType) {
+  if (leaveType === 'COMP Off') return 'Comp Off';
+  if (leaveType === 'AU')       return 'AU';
+  if (leaveType === 'Paid' || leaveType === 'Unpaid' || leaveType === 'WFH') return null; // no tooltip needed
+  return leaveType || null; // show actual backend value for "Other" types
+}
+
 function StatusIcon({ status, leaveType }) {
   if (!status) return null;
   const SWATCH_COLOR = { Paid: '#2563EB', Unpaid: '#93C5FD', WFH: '#59be68' };
@@ -33,7 +47,7 @@ function StatusIcon({ status, leaveType }) {
   }
   if (status === 'Pending') {
     icon = (
-      <Box component="span" sx={{ ...size, position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: fillColor,padding:'8px'}}>
+      <Box component="span" sx={{ ...size, position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: fillColor, padding: '8px' }}>
         <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v9" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round"/>
@@ -68,28 +82,17 @@ export default function DetailPanel({ context, onClose, filters }) {
   const leaveStatusesKey = JSON.stringify(filters?.leave_statuses || []);
   const leaveTypesKey    = JSON.stringify(filters?.leave_types || []);
 
-  // Skip panel entirely for Rejected or Cancelled — tooltip on the cell is sufficient
   const leaveStatus = context?.leaveStatus;
   const isBlockedStatus = leaveStatus === 'Rejected' || leaveStatus === 'Cancelled';
 
   useEffect(() => {
     if (!context || isBlockedStatus) return;
-
     const handleClickOutside = (e) => {
-      // If click is inside panel - ignore
-      if (panelRef.current && panelRef.current.contains(e.target)) {
-        return;
-      }
-
-      // Otherwise - close panel
+      if (panelRef.current && panelRef.current.contains(e.target)) return;
       onClose();
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [context, onClose, isBlockedStatus]);
 
   useEffect(() => {
@@ -144,10 +147,7 @@ export default function DetailPanel({ context, onClose, filters }) {
     setPos({ top, left });
   }, [context, data, isBlockedStatus]);
 
-  // No context at all — render nothing
   if (!context) return null;
-
-  // Rejected / Cancelled — render nothing (tooltip lives on the cell via StatusIcon)
   if (isBlockedStatus) return null;
 
   const { type, date } = context;
@@ -198,18 +198,11 @@ export default function DetailPanel({ context, onClose, filters }) {
             },
           }}
         >
-          <Box
-            onClick={onClose}
-            sx={{ display: 'flex', justifyContent: 'center', pt: 1.25, pb: 0.75, flexShrink: 0, cursor: 'pointer' }}
-          >
+          <Box onClick={onClose} sx={{ display: 'flex', justifyContent: 'center', pt: 1.25, pb: 0.75, flexShrink: 0, cursor: 'pointer' }}>
             <Box sx={{ width: 40, height: 4, borderRadius: 99, background: '#dde0e6' }} />
           </Box>
 
-          <Box sx={{
-            px: 2, pb: 1.25, pt: 0.25, flexShrink: 0,
-            borderBottom: '1px solid #f0f2f5',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-          }}>
+          <Box sx={{ px: 2, pb: 1.25, pt: 0.25, flexShrink: 0, borderBottom: '1px solid #f0f2f5', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Box>
               <Box sx={{
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
@@ -247,14 +240,7 @@ export default function DetailPanel({ context, onClose, filters }) {
   // Desktop: floating popup
   return (
     <>
-      <Box
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 200,
-          pointerEvents: 'none'  
-        }}
-      />
+      <Box sx={{ position: 'fixed', inset: 0, zIndex: 200, pointerEvents: 'none' }} />
       <Paper
         ref={panelRef}
         onClick={e => e.stopPropagation()}
@@ -282,6 +268,8 @@ export default function DetailPanel({ context, onClose, filters }) {
   );
 }
 
+/* ─── Shared sub-components ─── */
+
 function Dot({ color }) {
   return <Box component="span" sx={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: color, mx: '3px' }} />;
 }
@@ -299,15 +287,12 @@ function WFHRow({ children }) {
     <Box sx={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       px: 1, py: 0.75, borderRadius: '6px',
-      background: '#f8f9fb',
-      border: '1px solid #eef0f3',
-      mb: '3px',
+      background: '#f8f9fb', border: '1px solid #eef0f3', mb: '3px',
     }}>
       {children}
     </Box>
   );
 }
-
 
 function RiskTag({ risk }) {
   return <Chip label={risk} size="small" sx={{ height: 18, fontSize: 9, fontWeight: 700, background: RISK_BG[risk], color: RISK_COLOR[risk], borderRadius: '4px', '& .MuiChip-label': { px: '6px', py: 0 } }} />;
@@ -321,6 +306,42 @@ function Mini({ label, val, c = '#1a1f2e' }) {
     </Box>
   );
 }
+
+// Leave type label with dot — short form + tooltip for full name when applicable
+function LeaveTypeLabel({ leaveType, halfDaySession, isHalfDay }) {
+  if (!leaveType) return null;
+
+  const short    = getShortLabel(leaveType);
+  const fullName = getFullLabel(leaveType);
+  const dotColor = LEAVE_COLORS[leaveType] || '#9aa0ad';
+
+  let text = short;
+  if (leaveType === 'WFH') {
+    text = 'WFH';
+  } else if (isHalfDay) {
+    text = `Partial · ${halfDaySession || short}`;
+  }
+
+  const label = (
+    <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
+      <Dot color={dotColor} />
+      <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>{text}</Typography>
+    </Box>
+  );
+
+  // Only wrap in tooltip if there's a full name different from what's already shown
+  if (fullName && fullName !== short) {
+    return (
+      <Tooltip title={fullName} placement="top" arrow>
+        {label}
+      </Tooltip>
+    );
+  }
+
+  return label;
+}
+
+/* ─── View components ─── */
 
 function EmployeeView({ data, leaveStatus, leaveType }) {
   const projects = data?.projects || [];
@@ -338,17 +359,12 @@ function EmployeeView({ data, leaveStatus, leaveType }) {
                 <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{p.project_name}</Typography>
               </Box>
               {p.leave_type && (
-                  <Box sx={{ display: 'flex', alignItems: 'center',mr:'-4px', mt: '2px' }}>
-                    <Dot color={LEAVE_COLORS[p.leave_type] || '#9aa0ad'} />
-                    <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
-                      {p.leave_type === 'WFH'
-                        ? 'WFH'
-                        : p.is_half_day
-                          ? `Partial · ${p.half_day_session || p.leave_type}`
-                          : p.leave_type}
-                    </Typography>
-                  </Box>
-                )}
+                <LeaveTypeLabel
+                  leaveType={p.leave_type}
+                  halfDaySession={p.half_day_session}
+                  isHalfDay={p.is_half_day}
+                />
+              )}
             </Row>
           ))
       }
@@ -366,7 +382,6 @@ function ProjectView({ data }) {
 
   const partialOut = emps.filter(e => e?.is_half_day && e?.leave_type !== 'WFH');
   const wfhOnly    = emps.filter(e => e?.leave_type === 'WFH');
-  const fullyOut   = emps.filter(e => e?.leave_type && e?.leave_type !== 'WFH' && !e?.is_half_day);
 
   const risk = data?.project?.risk_level || 'LOW';
 
@@ -381,26 +396,22 @@ function ProjectView({ data }) {
         <RiskTag risk={risk} />
       </Box>
 
-      <SectionLabel>ON LEAVE ({fullyOut.length + partialOut.length})</SectionLabel>
+      <SectionLabel>ON LEAVE ({emps.filter(e => e.leave_type).length})</SectionLabel>
 
-      {(fullyOut.length + partialOut.length) === 0
+      {emps.filter(e => e.leave_type).length === 0
         ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>All available.</Typography>
         : emps
             .filter(emp => emp.leave_type)
             .map(emp => (
               <Row key={emp.user_id}>
                 <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>
-                    {emp.full_name}
-                  </Typography>
+                  <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{emp.full_name}</Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
-                    <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                    <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
-                      {emp.leave_type}
-                      {emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
-                    </Typography>
-                </Box>
+                <LeaveTypeLabel
+                  leaveType={emp.leave_type}
+                  halfDaySession={emp.half_day_session}
+                  isHalfDay={emp.is_half_day}
+                />
               </Row>
             ))
       }
@@ -414,21 +425,14 @@ function DayView({ data }) {
   const dateMeta    = data?.date               || {};
   const holidayName = dateMeta.is_public_holiday ? dateMeta.holiday_name : null;
 
-  // Left column: split employees into real absences vs WFH
   const onLeaveEmps = allEmps.filter(e => e.availability !== 'WFH');
   const wfhEmps     = allEmps.filter(e => e.availability === 'WFH');
 
-  // Right column: impacted = real absences (Approved only — backend already filters);
-  //               wfh impacted = WFH only
   const impactedProjects    = allProjects.filter(p => (p.employees_on_leave ?? 0) > 0);
   const wfhImpactedProjects = allProjects.filter(p => p.is_wfh_impacted === true);
 
   const SCROLL_COL = {
-    overflowY: 'auto',
-    maxHeight: 260,
-    flex: 1,
-    minHeight: 0,
-    pr: '2px',
+    overflowY: 'auto', maxHeight: 260, flex: 1, minHeight: 0, pr: '2px',
     '&::-webkit-scrollbar': { width: '3px' },
     '&::-webkit-scrollbar-track': { background: 'transparent' },
     '&::-webkit-scrollbar-thumb': { background: '#dde0e6', borderRadius: '99px' },
@@ -439,9 +443,7 @@ function DayView({ data }) {
     letterSpacing: '0.7px', textTransform: 'uppercase',
     mt: 1, mb: 0.5,
     position: 'sticky', top: 0,
-    background: '#fff',
-    zIndex: 1,
-    pt: '2px',
+    background: '#fff', zIndex: 1, pt: '2px',
   };
 
   return (
@@ -456,13 +458,10 @@ function DayView({ data }) {
 
       <Box sx={{ display: 'flex', minHeight: 0 }}>
 
-        {/* ── Left column: On Leave + WFH employees ── */}
+        {/* Left column: On Leave + WFH employees */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <Box sx={SCROLL_COL}>
-
-            <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>
-              ON LEAVE ({onLeaveEmps.length})
-            </Typography>
+            <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>ON LEAVE ({onLeaveEmps.length})</Typography>
             {onLeaveEmps.length === 0
               ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>None.</Typography>
               : onLeaveEmps.map(emp => (
@@ -471,12 +470,11 @@ function DayView({ data }) {
                       <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#1a1f2e' }}>{emp.full_name}</Typography>
                     </Box>
                     {emp.leave_type && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', mt: '2px' }}>
-                          <Dot color={LEAVE_COLORS[emp.leave_type] || '#9aa0ad'} />
-                          <Typography sx={{ fontSize: 10, color: '#9aa0ad' }}>
-                            {emp.leave_type}{emp.is_half_day && emp.half_day_session ? ` · ${emp.half_day_session}` : ''}
-                          </Typography>
-                        </Box>
+                      <LeaveTypeLabel
+                        leaveType={emp.leave_type}
+                        halfDaySession={emp.half_day_session}
+                        isHalfDay={emp.is_half_day}
+                      />
                     )}
                   </Row>
                 ))
@@ -496,21 +494,16 @@ function DayView({ data }) {
                 ))}
               </>
             )}
-
           </Box>
         </Box>
 
         {/* Column divider */}
         <Box sx={{ background: '#f0f2f5', mx: 1, my: '1px', width: '1px', flexShrink: 0 }} />
 
-        {/* ── Right column: Impacted projects + WFH impacted projects ── */}
+        {/* Right column: Impacted projects */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <Box sx={SCROLL_COL}>
-
-            {/* IMPACTED PROJECT — Approved real absences only */}
-            <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>
-              IMPACTED PROJECT ({impactedProjects.length})
-            </Typography>
+            <Typography sx={{ ...STICKY_LABEL, mt: 0 }}>IMPACTED PROJECT ({impactedProjects.length})</Typography>
             {impactedProjects.length === 0
               ? <Typography sx={{ fontSize: 11, color: '#b0b6c3' }}>None.</Typography>
               : impactedProjects.map(p => (
@@ -526,7 +519,6 @@ function DayView({ data }) {
                 ))
             }
 
-            {/* WFH IMPACTED — projects with WFH only (no real absence) */}
             {wfhImpactedProjects.length > 0 && (
               <>
                 <Box sx={{ height: '0.2px', background: '#eef0f3', my: '4px' }} />
@@ -543,7 +535,6 @@ function DayView({ data }) {
                 ))}
               </>
             )}
-
           </Box>
         </Box>
 

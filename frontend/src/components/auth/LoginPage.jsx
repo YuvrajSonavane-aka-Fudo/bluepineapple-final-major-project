@@ -128,7 +128,7 @@ export default function LoginPage() {
         </Box>
       )}
 
-      {/* RIGHT PANEL- Mobile full screen  */}
+      {/* RIGHT PANEL — Mobile full screen */}
       <Box sx={{
         flex: 1,
         display: 'flex',
@@ -136,7 +136,6 @@ export default function LoginPage() {
         justifyContent: 'center',
         p: isMobile ? 3 : 6,
         zIndex: 1,
-        // On mobile: min full screen height so it fills properly
         minHeight: isMobile ? '100vh' : 'unset',
       }}>
         <Box sx={{ width: '100%', maxWidth: isMobile ? '100%' : 500, ...fadeUp(0.15) }}>
@@ -175,49 +174,62 @@ export default function LoginPage() {
             </Typography>
 
             <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="Corporate Email"
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="name@company.com"
-                required
-                autoFocus
-                fullWidth
-                size="small"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '10px', fontSize: 14,
-                    background: 'rgba(255,255,255,0.06)',
-                    color: '#fff',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.22)' },
-                    '&.Mui-focused fieldset': { borderColor: '#3b5bdb', borderWidth: '1.5px' },
-                  },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.32)', fontSize: 13 },
-                  '& .MuiInputLabel-root.Mui-focused': { color: '#63b3ed' },
-                  '& input': { color: '#fff' },
-                }}
-              />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <Typography component="label" htmlFor="email-input" sx={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.4px' }}>
+                  Corporate Email
+                </Typography>
+                <TextField
+                  id="email-input"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  required
+                  autoFocus
+                  fullWidth
+                  size="small"
+                  // Hide MUI's own label entirely — we render it ourselves above
+                  InputLabelProps={{ shrink: false, sx: { display: 'none' } }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '10px',
+                      fontSize: 14,
+                      background: 'rgba(255,255,255,0.06)',
+                      color: '#fff',
+                      '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
+                      '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.22)' },
+                      '&.Mui-focused fieldset': { borderColor: '#3b5bdb', borderWidth: '1.5px' },
+                    },
+                    // Placeholder color
+                    '& input::placeholder': { color: 'rgba(255,255,255,0.22)', opacity: 1 },
+                    '& input': { color: '#fff' },
+                  }}
+                />
+              </Box>
 
               {error && (
                 <Box sx={{ p: '10px 12px', background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: '8px', color: '#fca5a5', fontSize: 13 }}>
                   {error}
                 </Box>
               )}
-
               <Button
                 type="submit"
                 disabled={loading}
                 fullWidth
                 variant="contained"
                 sx={{
-                  mt: 0.5, py: isMobile ? 1.75 : 1.5, borderRadius: '10px',
+                  mt: 0.5,
+                  py: 1.25,
+                  borderRadius: '10px',
                   background: 'linear-gradient(135deg, #3b5bdb 0%, #63b3ed 100%)',
                   fontSize: 14, fontWeight: 700, textTransform: 'none', letterSpacing: '-0.1px',
                   boxShadow: '0 4px 20px rgba(59,91,219,0.45)',
                   transition: 'all 0.2s ease',
-                  '&:hover': { background: 'linear-gradient(135deg, #3451c7 0%, #4fa8d5 100%)', boxShadow: '0 8px 28px rgba(59,91,219,0.6)', transform: 'translateY(-1px)' },
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #3451c7 0%, #4fa8d5 100%)',
+                    boxShadow: '0 8px 28px rgba(59,91,219,0.6)',
+                    transform: 'translateY(-1px)',
+                  },
                   '&:active': { transform: 'translateY(0)' },
                   '&.Mui-disabled': { background: 'rgba(59,91,219,0.3)', color: 'rgba(255,255,255,0.4)', boxShadow: 'none' },
                 }}

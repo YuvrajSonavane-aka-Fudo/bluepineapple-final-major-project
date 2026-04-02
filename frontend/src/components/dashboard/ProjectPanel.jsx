@@ -1,4 +1,3 @@
-// src/components/dashboard/ProjectPanel.jsx
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { parseISO, isToday } from 'date-fns';
 import { Box, Typography } from '@mui/material';
@@ -72,7 +71,7 @@ export default function ProjectPanel({
     return () => el.removeEventListener('wheel', handler);
   }, [syncAll]);
 
-  // ── Touch scroll sync (mobile swipe) ──
+  // Touch scroll sync (mobile swipe) 
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
@@ -94,7 +93,7 @@ export default function ProjectPanel({
     };
   }, [syncAll]);
 
-  // projects are already pre-filtered by Dashboard's smart search
+  // projects are already pre-filtered by Dashboard smart search
   const filtered = projects;
 
   const todayIdx  = dateStrip.findIndex(d => isToday(parseISO(d.date)));
