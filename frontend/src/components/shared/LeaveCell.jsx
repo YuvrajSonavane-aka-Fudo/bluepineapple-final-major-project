@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Tooltip } from '@mui/material';
+
 const LEAVE_COLOR = {
   'Paid':     '#2563EB',
   'Unpaid':   '#93C5FD',
@@ -27,36 +28,68 @@ function getFullLabel(leaveType) {
   return leaveType || '';
 }
 
-// Rounded chip — this is the only visual change
-const chipStyle = (bg) => ({
-  position: 'absolute',
-  inset: 3,
-  borderRadius: 5,
-  background: bg,
-  overflow: 'hidden',
-  transition: 'transform 120ms ease, box-shadow 120ms ease',
-});
-
-const chipHoverStyle = {
-  transform: 'scale(1.13)',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-  zIndex: 10,
-};
-
-function Chip({ bg, children, hovered }) {
+// Rounded animated chip — background only, no children
+function Chip({ bg, hovered }) {
   return (
-    <div style={{ ...chipStyle(bg), ...(hovered ? chipHoverStyle : {}) }}>
-      {children}
+    <div style={{
+      position: 'absolute',
+      inset: 3,
+      borderRadius: 5,
+      background: bg,
+      // NO overflow:hidden here — labels sit outside this div
+      transition: 'transform 120ms ease, box-shadow 120ms ease',
+      ...(hovered ? {
+        transform: 'scale(1.13)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+        zIndex: 2,
+      } : { zIndex: 2 }),
+    }} />
+  );
+}
+
+// Triangle chip for half-day — background shape only
+function TriChip({ baseColor, secColor, session, hovered }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      inset: 3,
+      borderRadius: 5,
+      overflow: 'hidden', // needed to clip the triangle to rounded corners
+      transition: 'transform 120ms ease, box-shadow 120ms ease',
+      zIndex: 2,
+      ...(hovered ? {
+        transform: 'scale(1.13)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+      } : {}),
+    }}>
+      {secColor ? (
+        <>
+          <div style={{
+            position: 'absolute', inset: 0, background: baseColor,
+            clipPath: session === 'Second Half' ? 'polygon(100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,0 100%)',
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0, background: secColor,
+            clipPath: session === 'Second Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
+          }} />
+        </>
+      ) : (
+        <div style={{
+          position: 'absolute', inset: 0, background: baseColor,
+          clipPath: session === 'First Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
+        }} />
+      )}
     </div>
   );
 }
 
+// Label rendered ABOVE the chip at z-index 5 — never clipped
 function CellLabel({ leaveType }) {
   const label = getCellLabel(leaveType);
   if (!label) return null;
   return (
     <div style={{
-      position: 'absolute', inset: 0, zIndex: 3,
+      position: 'absolute', inset: 0, zIndex: 5,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       pointerEvents: 'none',
       fontSize: 8, fontWeight: 800, color: '#fff',
@@ -66,6 +99,33 @@ function CellLabel({ leaveType }) {
       {label}
     </div>
   );
+}
+
+// Status overlay rendered ABOVE the chip at z-index 5 — never clipped
+function StatusOverlay({ isPending, isBlocked }) {
+  if (isPending) {
+    return (
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 5,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        pointerEvents: 'none', color: '#F59E0B', fontWeight: 700, fontSize: 22,
+      }}>!</div>
+    );
+  }
+  if (isBlocked) {
+    return (
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 5,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        pointerEvents: 'none',
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </div>
+    );
+  }
+  return null;
 }
 
 export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
@@ -127,128 +187,29 @@ export default function LeaveCell({ cell, dateInfo, isFirst, onClick }) {
         zIndex: hasLeave ? 2 : 'auto',
       }}
     >
-      {/* ── SPLIT HALF-DAY APPROVED ── */}
-      {hasSplit && !isBlocked && !isPending && (
+      {/* ── SPLIT HALF-DAY ── */}
+      {hasSplit && (
         <>
-          <Chip bg="transparent" hovered={hovered}>
-            <div style={{
-              position: 'absolute', inset: 0, background: baseColor,
-              clipPath: session === 'Second Half' ? 'polygon(100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,0 100%)',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0, background: secColor,
-              clipPath: session === 'Second Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
-            }} />
-          </Chip>
+          <TriChip baseColor={baseColor} secColor={secColor} session={session} hovered={hovered} />
+          <StatusOverlay isPending={isPending} isBlocked={isBlocked} />
           <CellLabel leaveType={leaveType} />
         </>
       )}
 
-      {/* ── SPLIT HALF-DAY PENDING ── */}
-      {hasSplit && isPending && (
-        <>
-          <Chip bg="transparent" hovered={hovered}>
-            <div style={{
-              position: 'absolute', inset: 0, background: baseColor,
-              clipPath: session === 'Second Half' ? 'polygon(100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,0 100%)',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0, background: secColor,
-              clipPath: session === 'Second Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
-            }} />
-          </Chip>
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: '#F59E0B', fontWeight: 700, fontSize: 22, zIndex: 4 }}>!</div>
-          <CellLabel leaveType={leaveType} />
-        </>
-      )}
-
-      {/* ── SPLIT HALF-DAY REJECTED/CANCELLED ── */}
-      {hasSplit && isBlocked && (
-        <>
-          <Chip bg="transparent" hovered={hovered}>
-            <div style={{
-              position: 'absolute', inset: 0, background: baseColor,
-              clipPath: session === 'Second Half' ? 'polygon(100% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,0 100%)',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0, background: secColor,
-              clipPath: session === 'Second Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
-            }} />
-          </Chip>
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 4 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </div>
-          <CellLabel leaveType={leaveType} />
-        </>
-      )}
-
-      {/* ── FULL LEAVE APPROVED ── */}
-      {hasLeave && !hasSplit && !isHalfDay && !isBlocked && !isPending && (
+      {/* ── FULL LEAVE ── */}
+      {hasLeave && !hasSplit && !isHalfDay && (
         <>
           <Chip bg={baseColor} hovered={hovered} />
+          <StatusOverlay isPending={isPending} isBlocked={isBlocked} />
           <CellLabel leaveType={leaveType} />
         </>
       )}
 
-      {/* ── FULL LEAVE PENDING ── */}
-      {hasLeave && !hasSplit && !isHalfDay && isPending && (
+      {/* ── HALF-DAY ── */}
+      {hasLeave && !hasSplit && isHalfDay && (
         <>
-          <Chip bg={baseColor} hovered={hovered} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: '#F59E0B', fontWeight: 700, fontSize: 22, zIndex: 4 }}>!</div>
-          <CellLabel leaveType={leaveType} />
-        </>
-      )}
-
-      {/* ── FULL LEAVE REJECTED/CANCELLED ── */}
-      {hasLeave && !hasSplit && !isHalfDay && isBlocked && (
-        <>
-          <Chip bg={baseColor} hovered={hovered} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 4 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </div>
-          <CellLabel leaveType={leaveType} />
-        </>
-      )}
-
-      {/* ── HALF-DAY APPROVED ── */}
-      {hasLeave && !hasSplit && isHalfDay && !isBlocked && !isPending && (
-        <>
-          <Chip bg="transparent" hovered={hovered}>
-            <div style={{
-              position: 'absolute', inset: 0, background: baseColor,
-              clipPath: session === 'First Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
-            }} />
-          </Chip>
-          <CellLabel leaveType={leaveType} />
-        </>
-      )}
-
-      {/* ── HALF-DAY PENDING ── */}
-      {hasLeave && !hasSplit && isHalfDay && isPending && (
-        <>
-          <Chip bg="transparent" hovered={hovered}>
-            <div style={{
-              position: 'absolute', inset: 0, background: baseColor,
-              clipPath: session === 'First Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
-            }} />
-          </Chip>
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: '#F59E0B', fontWeight: 700, fontSize: 22, zIndex: 4 }}>!</div>
-          <CellLabel leaveType={leaveType} />
-        </>
-      )}
-
-      {/* ── HALF-DAY REJECTED/CANCELLED ── */}
-      {hasLeave && !hasSplit && isHalfDay && isBlocked && (
-        <>
-          <Chip bg="transparent" hovered={hovered}>
-            <div style={{
-              position: 'absolute', inset: 0, background: baseColor,
-              clipPath: session === 'First Half' ? 'polygon(0 0,100% 0,0 100%)' : 'polygon(100% 0,100% 100%,0 100%)',
-            }} />
-          </Chip>
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 4 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </div>
+          <TriChip baseColor={baseColor} session={session} hovered={hovered} />
+          <StatusOverlay isPending={isPending} isBlocked={isBlocked} />
           <CellLabel leaveType={leaveType} />
         </>
       )}
