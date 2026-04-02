@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const RISK_COLORS = {
   HIGH:   'rgba(239,68,68,0.80)',
   MEDIUM: 'rgba(245,158,11,0.55)',
@@ -5,6 +7,8 @@ const RISK_COLORS = {
 };
 
 export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) {
+  const [hovered, setHovered] = useState(false);
+
   const isWeekend = dateInfo?.is_weekend;
   const isHoliday = dateInfo?.is_public_holiday;
   const nb = '1px solid #e8eaed';
@@ -18,6 +22,7 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
     borderRight: isToday ? tb : nb,
     borderBottom: nb,
     boxSizing: 'border-box', padding: 0,
+    position: 'relative',
   };
 
   let cellBg = '#ffffff';
@@ -28,14 +33,12 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   const onLeave  = cell?.employees_on_leave ?? 0;
   const partial  = cell?.partial_count      ?? 0;
 
-  // Only highlight if there are REAL absences (on_leave or non-WFH partial)
-  // WFH never causes a highlight — those employees are still working
   const shouldHighlight = onLeave > 0 || partial > 0;
   const showRiskColor   = !isWeekend && !isHoliday && risk !== null && shouldHighlight;
-  const bg              = showRiskColor ? (RISK_COLORS[risk] || RISK_COLORS['LOW']) : cellBg;
+  const chipBg          = showRiskColor ? (RISK_COLORS[risk] || RISK_COLORS['LOW']) : null;
 
-  // Only clickable if the cell is highlighted (has real absences)
   const isClickable = shouldHighlight && !isWeekend && !isHoliday;
+
   const handleClick = (e) => {
     if (!isClickable) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -45,7 +48,26 @@ export default function RiskCell({ cell, dateInfo, isFirst, isToday, onClick }) 
   return (
     <div
       onClick={isClickable ? handleClick : undefined}
-      style={{ ...sharedStyle, background: bg, cursor: isClickable ? 'pointer' : 'default' }}
-    />
+      onMouseEnter={() => isClickable && setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ ...sharedStyle, background: cellBg, cursor: isClickable ? 'pointer' : 'default' }}
+    >
+      {chipBg && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 3,
+            borderRadius: 5,
+            background: chipBg,
+            transition: 'transform 120ms ease, box-shadow 120ms ease',
+            ...(hovered ? {
+              transform: 'scale(1.13)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+              zIndex: 10,
+            } : {}),
+          }}
+        />
+      )}
+    </div>
   );
 }

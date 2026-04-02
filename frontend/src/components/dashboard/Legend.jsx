@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { exportDashboardToExcel } from './ExportToExcel';
 
 const LEAVE_TYPES = [
-  { label: 'Paid Leave',   color: '#2563EB' },
-  { label: 'Unpaid Leave', color: '#93C5FD' },
-  { label: 'WFH',          color: '#59be68' },
-  { label: 'COMP Off', color: '#09637E' },
-  { label: 'AU', color: '#7AB2B2' },
-  { label: 'Other', color: '#636CCB' },
+  { label: 'Paid Leave',   color: '#2563EB', short: null,  full: null },
+  { label: 'Unpaid Leave', color: '#93C5FD', short: null,  full: null },
+  { label: 'WFH',          color: '#59be68', short: null,  full: null },
+  { label: 'Comp Off',     color: '#2563EB', short: 'CO',  full: 'Comp Off' },
+  { label: 'AU',           color: '#2563EB', short: 'AU',  full: 'AU' },
+  { label: 'Other',        color: '#2563EB', short: 'O',   full: 'Other leave types' },
 ];
 const DAY_PORTION = [
   { label: 'Full Day',    type: 'block' },
@@ -16,9 +16,9 @@ const DAY_PORTION = [
   { label: 'Half Day PM', type: 'half-pm' },
 ];
 const STATUSES = [
-  { label: 'Approved',         type: 'check' },
-  { label: 'Pending Approval', type: 'pending' },
-  { label: 'Rejected / Cancelled',         type: 'rejected' },
+  { label: 'Approved',              type: 'check' },
+  { label: 'Pending Approval',      type: 'pending' },
+  { label: 'Rejected / Cancelled',  type: 'rejected' },
 ];
 const TIMELINE = [
   { label: 'Today',          type: 'today' },
@@ -38,59 +38,53 @@ const swatchBase = { width: 20, height: 16, borderRadius: '3px', flexShrink: 0 }
 function Swatch({ item }) {
   const { type } = item;
 
-  // Day portion swatches
-  if (type === 'block') {
-    return <Box sx={{ ...swatchBase, background: '#2563EB' }} />;
-  }
-  if (type === 'half-am') {
-    return (
-      <Box sx={{ ...swatchBase, border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}>
-        <Box sx={{ position: 'absolute', inset: 0, background: '#2563EB', clipPath: 'polygon(0 0,100% 0,0 100%)' }} />
-      </Box>
-    );
-  }
-  if (type === 'half-pm') {
-    return (
-      <Box sx={{ ...swatchBase, border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}>
-        <Box sx={{ position: 'absolute', inset: 0, background: '#2563EB', clipPath: 'polygon(100% 0,100% 100%,0 100%)' }} />
-      </Box>
-    );
-  }
-
-  // Status swatches — consistent with LeaveCell and DetailPanel StatusIcon
-  if (type === 'check') {
-    return (
-      <Box sx={{ ...swatchBase,  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
-      </Box>
-    );
-  }
-  // Pending: bang sign overlay 
-  if (type === 'pending') {
-  return (
-    <Box sx={{ ...swatchBase, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',}}>
+  if (type === 'block')   return <Box sx={{ ...swatchBase, background: '#2563EB' }} />;
+  if (type === 'half-am') return (
+    <Box sx={{ ...swatchBase, border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}>
+      <Box sx={{ position: 'absolute', inset: 0, background: '#2563EB', clipPath: 'polygon(0 0,100% 0,0 100%)' }} />
+    </Box>
+  );
+  if (type === 'half-pm') return (
+    <Box sx={{ ...swatchBase, border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}>
+      <Box sx={{ position: 'absolute', inset: 0, background: '#2563EB', clipPath: 'polygon(100% 0,100% 100%,0 100%)' }} />
+    </Box>
+  );
+  if (type === 'check') return (
+    <Box sx={{ ...swatchBase, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+    </Box>
+  );
+  if (type === 'pending') return (
+    <Box sx={{ ...swatchBase, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
         <path d="M12 5v9" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round"/>
         <circle cx="12" cy="18" r="1.5" fill="#F59E0B"/>
       </svg>
     </Box>
   );
-}
-  // Rejected: leave colour fill + red cross overlay (matches LeaveCell rejected style)
-  if (type === 'rejected') {
-    return (
-      <Box sx={{ ...swatchBase,  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </Box>
-    );
-  }
-
-  // Timeline swatches
+  if (type === 'rejected') return (
+    <Box sx={{ ...swatchBase, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </Box>
+  );
   if (type === 'today')   return <Box sx={{ ...swatchBase, border: '2px solid #994545' }} />;
   if (type === 'weekend') return <Box sx={{ ...swatchBase, background: 'repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 2px,#f3f4f6 2px,#f3f4f6 5px)' }} />;
   if (type === 'holiday') return <Box sx={{ ...swatchBase, background: '#FEFCE8', border: '1px solid #FDE68A' }} />;
 
   return null;
+}
+
+// Leave type swatch — colored block with optional short text overlay
+function LeaveTypeSwatch({ color, short }) {
+  return (
+    <Box sx={{ ...swatchBase, background: color, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {short && (
+        <Typography sx={{ fontSize: 7, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: '0.2px', userSelect: 'none', position: 'relative', zIndex: 1 }}>
+          {short}
+        </Typography>
+      )}
+    </Box>
+  );
 }
 
 function Section({ title, children }) {
@@ -105,7 +99,6 @@ function Section({ title, children }) {
 export default function Legend({
   showAll, onShowAllChange,
   hideWeekends, onHideWeekendsChange,
-  // export props passed from Dashboard
   empData, projData, dateStrip, filters,
   isMobile = false,
 }) {
@@ -128,11 +121,10 @@ export default function Legend({
         maxWidth: '100%',
         background: '#fff',
         borderLeft: { xs: 'none', md: '1px solid #e5e7eb' },
-        py: 1.5
+        py: 1.5,
       }}
     >
-
-      {/* Filters + Export — desktop only; on mobile these live in the Filters drawer */}
+      {/* Filters + Export — desktop only */}
       {!isMobile && (
         <Box sx={{ px: 1.75, pb: 1.75, borderBottom: '1px solid #e5e7eb' }}>
           <Typography component="p" sx={sectionTitle}>FILTERS</Typography>
@@ -156,7 +148,6 @@ export default function Legend({
               </Box>
             ))}
 
-            {/* Export button */}
             <Button
               onClick={handleExport}
               disabled={exporting}
@@ -175,14 +166,8 @@ export default function Legend({
                   )
               }
               sx={{
-                mt: 0.5,
-                fontSize: 11,
-                fontWeight: 600,
-                textTransform: 'none',
-                background: '#2563EB',
-                borderRadius: '6px',
-                boxShadow: 'none',
-                py: 0.6,
+                mt: 0.5, fontSize: 11, fontWeight: 600, textTransform: 'none',
+                background: '#2563EB', borderRadius: '6px', boxShadow: 'none', py: 0.6,
                 '&:hover': { background: '#1d4ed8', boxShadow: 'none' },
                 '&:disabled': { background: '#93c5fd', color: '#fff' },
               }}
@@ -194,12 +179,15 @@ export default function Legend({
       )}
 
       <Section title="LEAVE TYPES">
-        {LEAVE_TYPES.map(item => (
-          <Box key={item.label} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ ...swatchBase, background: item.color }} />
-            <Typography sx={labelSx}>{item.label}</Typography>
-          </Box>
-        ))}
+        {LEAVE_TYPES.map(item => {
+          const row = (
+            <Box key={item.label} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LeaveTypeSwatch color={item.color} short={item.short} />
+              <Typography sx={labelSx}>{item.label}</Typography>
+            </Box>
+          );
+          return row;
+        })}
       </Section>
       <Divider sx={{ borderColor: '#f3f4f6' }} />
 

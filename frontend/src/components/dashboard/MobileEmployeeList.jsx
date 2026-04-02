@@ -1,4 +1,3 @@
-// src/components/dashboard/MobileEmployeeList.jsx
 import { useState } from 'react';
 import { parseISO, isToday, format } from 'date-fns';
 import { Box, Typography, InputBase, Collapse, Chip } from '@mui/material';

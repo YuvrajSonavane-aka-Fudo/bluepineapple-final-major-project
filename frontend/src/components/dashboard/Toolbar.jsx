@@ -210,23 +210,6 @@ function DateRangePicker({ anchorEl, onClose, startDate, endDate, onApply }) {
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // const handleDayClick = (day) => {
-  //   if (selecting === 'start') {
-  //     setTempStart(day); setTempEnd(null); setSelecting('end');
-  //   } else {
-  //     if (isBefore(day, tempStart)) { setTempEnd(tempStart); setTempStart(day); }
-  //     else { setTempEnd(day); }
-  //     setSelecting('start');
-  //   }
-  // };
-
-  const handleApply = () => {
-    const s = tempStart;
-    const e = tempEnd || tempStart;
-    if (s) { onApply(s, e); onClose(); }
-  };
-  // ─── REPLACE handleDayClick inside DateRangePicker ───
-
   const handleDayClick = (day) => {
     if (selecting === 'start') {
       setTempStart(day);
@@ -247,6 +230,13 @@ function DateRangePicker({ anchorEl, onClose, startDate, endDate, onApply }) {
       setSelecting('start');
     }
   };
+
+  const handleApply = () => {
+    const s = tempStart;
+    const e = tempEnd || tempStart;
+    if (s) { onApply(s, e); onClose(); }
+  };
+
   const fmtLabel = (d) => d ? format(d, 'MMM d, yyyy') : '—';
 
   return (
@@ -352,7 +342,7 @@ export default function Toolbar({
   const [lastQuickFilter, setLastQuickFilter] = useState(null);
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
-  const ALL_TYPES = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'COMP Off', 'AU', 'Other'];
+  const ALL_TYPES = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'COMP OFF', 'AU', 'Other'];
 
   const getActiveFilter = () => {
     const same = (d1, d2) => d1.toDateString() === d2.toDateString();
@@ -363,7 +353,6 @@ export default function Toolbar({
     return null;
   };
 
-  // Exact match wins; arrow-key navigation keeps last clicked filter highlighted
   const activeFilter = getActiveFilter() ?? lastQuickFilter;
   const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'MMM dd, yyyy');
 
@@ -372,9 +361,11 @@ export default function Toolbar({
   };
 
   const isAllSelected = (arr, all) => arr.length === 0 || arr.length === all.length;
+
+  // "Label (n)" pattern
   const activeLabel = (arr, all, label) => {
-    if (isAllSelected(arr, all)) return label;
-    return arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
+    if (isAllSelected(arr, all)) return `${label} (${all.length})`;
+    return `${label} (${arr.length})`;
   };
 
   const handleRangeChange = (newStart, newEnd) => {
@@ -439,7 +430,7 @@ export default function Toolbar({
             <ChevronLeftIcon sx={{ fontSize: 14 }} />
           </IconButton>
 
-          {/* Date range pill — opens calendar popover */}
+          {/* Date range pill */}
           <Box
             onClick={(e) => setDatePickerAnchor(e.currentTarget)}
             sx={{
@@ -481,9 +472,16 @@ export default function Toolbar({
           <Box sx={{ height: 20, background: 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
 
           {/* Projects */}
-          <Button onClick={e => { setProjAnchor(e.currentTarget); setStatusAnchor(null); setTypeAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
+          <Button
+            onClick={e => { setProjAnchor(e.currentTarget); setStatusAnchor(null); setTypeAnchor(null); }}
+            endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />}
+            sx={btnSx}
+          >
             <Box component="span" sx={{ display: 'inline-flex', width: 15, height: 15, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>P</Box>
-            {selectedProjectIds.length === 0 ? `Projects (${projects.length})` : `${selectedProjectIds.length} Projects`}
+            {/*"Projects (n)" pattern */}
+            {selectedProjectIds.length === 0
+              ? `Projects (${projects.length})`
+              : `Projects (${selectedProjectIds.length})`}
           </Button>
           <Menu anchorEl={projAnchor} open={Boolean(projAnchor)} onClose={() => setProjAnchor(null)} {...menuProps}
             PaperProps={{ ...menuProps.PaperProps, sx: { ...menuProps.PaperProps.sx, maxHeight: 260, overflowY: 'auto', maxWidth: 320 } }}>
@@ -498,7 +496,11 @@ export default function Toolbar({
           </Menu>
 
           {/* Status */}
-          <Button onClick={e => { setStatusAnchor(e.currentTarget); setProjAnchor(null); setTypeAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
+          <Button
+            onClick={e => { setStatusAnchor(e.currentTarget); setProjAnchor(null); setTypeAnchor(null); }}
+            endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />}
+            sx={btnSx}
+          >
             <FiberManualRecordIcon sx={{ fontSize: 10, color: '#16a34a' }} />
             {activeLabel(leaveStatuses, ALL_STATUSES, 'Status')}
           </Button>
@@ -514,7 +516,11 @@ export default function Toolbar({
           </Menu>
 
           {/* Leave Types */}
-          <Button onClick={e => { setTypeAnchor(e.currentTarget); setProjAnchor(null); setStatusAnchor(null); }} endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />} sx={btnSx}>
+          <Button
+            onClick={e => { setTypeAnchor(e.currentTarget); setProjAnchor(null); setStatusAnchor(null); }}
+            endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 12 }} />}
+            sx={btnSx}
+          >
             <FiberManualRecordIcon sx={{ fontSize: 10, color: '#2563EB' }} />
             {activeLabel(leaveTypes, ALL_TYPES, 'Leave Types')}
           </Button>

@@ -49,7 +49,6 @@ export default function DateStrip({ dateStrip = [], onDateClick, projectCells = 
         </div>
       )}
 
-      {/*  Removed zIndex: 100 — it was creating a stacking context that blocked the legend button */}
       <div style={{ display: 'flex', position: 'relative' }}>
         {dateStrip.map((d, i) => {
           const today     = isToday(parseISO(d.date));
