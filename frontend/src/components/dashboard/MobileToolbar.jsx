@@ -20,6 +20,7 @@ import FilterAltOffOutlinedIcon  from '@mui/icons-material/FilterAltOffOutlined'
 import CloseIcon                 from '@mui/icons-material/Close';
 import TuneIcon                  from '@mui/icons-material/Tune';
 import CalendarTodayIcon         from '@mui/icons-material/CalendarToday';
+import { differenceInCalendarDays } from 'date-fns';
 
 /* Mini Calendar with tappable month/year nav */
 function MiniCalendar({ viewDate, onViewDateChange, tempStart, tempEnd, hoverDate, onDayClick, onDayHover }) {
@@ -379,14 +380,20 @@ export default function MobileToolbar({
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
   const ALL_TYPES    = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'COMP OFF', 'AU', 'Other'];
 
-  const isSameD = (d1, d2) => d1?.toDateString?.() === d2?.toDateString?.();
+  
   const activeFilter = (() => {
-    if (isSameD(startDate, getTodayRange().start) && isSameD(endDate, getTodayRange().end)) return 'T';
-    if (isSameD(startDate, getWeekRange().start)  && isSameD(endDate, getWeekRange().end))  return 'W';
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+
+    const days = differenceInCalendarDays(e, s) + 1;
+
+    if (days === 1) return 'T';
+    if (days === 7) return 'W';
+
     return null;
   })();
 
-  const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'd MMM');
+  const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'MMM d, yyyy');
 
   const toggleArr = (arr, val, setter, allValues) => {
     const next = arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];

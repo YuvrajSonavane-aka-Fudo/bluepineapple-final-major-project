@@ -20,6 +20,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CloseIcon from '@mui/icons-material/Close';
+import { differenceInCalendarDays } from 'date-fns';
 
 /* ─────────────────────────────────────────────
    Mini Calendar
@@ -339,21 +340,32 @@ export default function Toolbar({
   const [showLogout, setShowLogout] = useState(false);
   const [datePickerAnchor, setDatePickerAnchor] = useState(null);
   const [dateError, setDateError] = useState(null);
-  const [lastQuickFilter, setLastQuickFilter] = useState(null);
 
   const ALL_STATUSES = ['Approved', 'Pending', 'Rejected', 'Cancelled'];
   const ALL_TYPES = ['Paid', 'Unpaid', 'WFH', 'Half Day', 'COMP OFF', 'AU', 'Other'];
 
   const getActiveFilter = () => {
-    const same = (d1, d2) => d1.toDateString() === d2.toDateString();
-    if (same(startDate, getTodayRange().start) && same(endDate, getTodayRange().end)) return 'T';
-    if (same(startDate, getWeekRange().start) && same(endDate, getWeekRange().end)) return 'W';
-    if (same(startDate, getMonthRange().start) && same(endDate, getMonthRange().end)) return 'M';
-    if (same(startDate, getYearRange().start) && same(endDate, getYearRange().end)) return 'Y';
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+
+    const days = differenceInCalendarDays(e, s) + 1;
+
+    // Today
+    if (days === 1) return 'T';
+
+    // Week (7 days)
+    if (days === 7) return 'W';
+
+    // Month (28–31 days)
+    if (days >= 28 && days <= 31 && s.getMonth() === e.getMonth()) return 'M';
+
+    // Year (365/366 days)
+    if (days >= 365 && days <= 366 && s.getFullYear() === e.getFullYear()) return 'Y';
+
     return null;
   };
 
-  const activeFilter = getActiveFilter() ?? lastQuickFilter;
+  const activeFilter = getActiveFilter();
   const fmtDisplay = (d) => format(d instanceof Date ? d : new Date(d), 'MMM dd, yyyy');
 
   const toggleArr = (arr, val, setter) => {
@@ -375,10 +387,10 @@ export default function Toolbar({
   };
 
   const QUICK = [
-    { label: 'T', tooltip: 'Today', fn: () => { const r = getTodayRange(); handleRangeChange(r.start, r.end); setLastQuickFilter('T'); } },
-    { label: 'W', tooltip: 'Week', fn: () => { const r = getWeekRange(); handleRangeChange(r.start, r.end); setLastQuickFilter('W'); } },
-    { label: 'M', tooltip: 'Month', fn: () => { const r = getMonthRange(); handleRangeChange(r.start, r.end); setLastQuickFilter('M'); } },
-    { label: 'Y', tooltip: 'Year', fn: () => { const r = getYearRange(); handleRangeChange(r.start, r.end); setLastQuickFilter('Y'); } },
+    { label: 'T', tooltip: 'Today', fn: () => { const r = getTodayRange(); handleRangeChange(r.start, r.end); } },
+    { label: 'W', tooltip: 'Week', fn: () => { const r = getWeekRange(); handleRangeChange(r.start, r.end);  } },
+    { label: 'M', tooltip: 'Month', fn: () => { const r = getMonthRange(); handleRangeChange(r.start, r.end); } },
+    { label: 'Y', tooltip: 'Year', fn: () => { const r = getYearRange(); handleRangeChange(r.start, r.end); } },
   ];
 
   const btnSx = {
