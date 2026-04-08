@@ -44,6 +44,23 @@ export default function Dashboard() {
   const headerScrollRef    = useRef(null);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      const el = headerScrollRef.current;
+      if (!el) return;
+
+      const handleScroll = () => {
+        scrollTargetRef.current = el.scrollLeft;
+      };
+
+      el.addEventListener('scroll', handleScroll);
+
+      return () => el.removeEventListener('scroll', handleScroll);
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (!legendVisible) return;
     const handler = (e) => {
       const clickedInsideLegend = legendRef.current?.contains(e.target);
@@ -242,20 +259,28 @@ useEffect(() => {
   const scrollTo = Math.max(0, todayIdx * CELL_W - 60);
   scrollTargetRef.current = scrollTo;
   setTimeout(() => {
-    if (headerScrollRef.current) headerScrollRef.current.scrollLeft = scrollTo;
-    if (empScrollRef.current)    empScrollRef.current.scrollLeft    = scrollTo;
-    if (projScrollRef.current)   projScrollRef.current.scrollLeft   = scrollTo;
-  }, 100);
+    requestAnimationFrame(() => {
+      if (headerScrollRef.current) headerScrollRef.current.scrollLeft = scrollTo;
+      if (empScrollRef.current)    empScrollRef.current.scrollLeft    = scrollTo;
+      if (projScrollRef.current)   projScrollRef.current.scrollLeft   = scrollTo;
+    });
+  }, 80);
 }, [filteredDateStrip]);
 
 // Re-sync rows when filter changes (employees remount, rows start at 0)
 useEffect(() => {
-  const scrollTo = scrollTargetRef.current;
+  const scrollTo =
+    headerScrollRef.current?.scrollLeft ??
+    scrollTargetRef.current ??
+    0;
+
   setTimeout(() => {
-    if (headerScrollRef.current) headerScrollRef.current.scrollLeft = scrollTo;
-    if (empScrollRef.current)    empScrollRef.current.scrollLeft    = scrollTo;
-    if (projScrollRef.current)   projScrollRef.current.scrollLeft   = scrollTo;
-  }, 50);
+    requestAnimationFrame(() => {
+      if (headerScrollRef.current) headerScrollRef.current.scrollLeft = scrollTo;
+      if (empScrollRef.current)    empScrollRef.current.scrollLeft    = scrollTo;
+      if (projScrollRef.current)   projScrollRef.current.scrollLeft   = scrollTo;
+    });
+  }, 60);
 }, [filteredEmployees, filteredProjects]);
 
   const projectCellsByDate = {};
