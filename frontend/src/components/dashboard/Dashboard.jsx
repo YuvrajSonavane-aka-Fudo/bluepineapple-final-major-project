@@ -227,22 +227,36 @@ export default function Dashboard() {
 
   }, [globalSearch, empData.employees, projData.projects, leaveTypes, leaveStatuses]);
 
-  useEffect(() => {
-    if (!filteredDateStrip.length) return;
-    const todayIdx = filteredDateStrip.findIndex(d => {
-      const dd = new Date(d.date + 'T12:00:00');
-      const now = new Date();
-      return dd.getFullYear() === now.getFullYear() && dd.getMonth() === now.getMonth() && dd.getDate() === now.getDate();
-    });
-    if (todayIdx < 0) return;
-    const CELL_W = 35;
-    const scrollTo = Math.max(0, todayIdx * CELL_W - 60);
-    setTimeout(() => {
-      [headerScrollRef, empScrollRef, projScrollRef].forEach(ref => {
-        if (ref.current) ref.current.scrollLeft = scrollTo;
-      });
-    }, 100);
-  }, [filteredDateStrip]);
+  // REPLACE with:
+const scrollTargetRef = useRef(0); // tracks current scroll position as source of truth
+
+useEffect(() => {
+  if (!filteredDateStrip.length) return;
+  const todayIdx = filteredDateStrip.findIndex(d => {
+    const dd = new Date(d.date + 'T12:00:00');
+    const now = new Date();
+    return dd.getFullYear() === now.getFullYear() && dd.getMonth() === now.getMonth() && dd.getDate() === now.getDate();
+  });
+  if (todayIdx < 0) return;
+  const CELL_W = 35;
+  const scrollTo = Math.max(0, todayIdx * CELL_W - 60);
+  scrollTargetRef.current = scrollTo;
+  setTimeout(() => {
+    if (headerScrollRef.current) headerScrollRef.current.scrollLeft = scrollTo;
+    if (empScrollRef.current)    empScrollRef.current.scrollLeft    = scrollTo;
+    if (projScrollRef.current)   projScrollRef.current.scrollLeft   = scrollTo;
+  }, 100);
+}, [filteredDateStrip]);
+
+// Re-sync rows when filter changes (employees remount, rows start at 0)
+useEffect(() => {
+  const scrollTo = scrollTargetRef.current;
+  setTimeout(() => {
+    if (headerScrollRef.current) headerScrollRef.current.scrollLeft = scrollTo;
+    if (empScrollRef.current)    empScrollRef.current.scrollLeft    = scrollTo;
+    if (projScrollRef.current)   projScrollRef.current.scrollLeft   = scrollTo;
+  }, 50);
+}, [filteredEmployees, filteredProjects]);
 
   const projectCellsByDate = {};
   (projData.projects || []).forEach(proj => {
